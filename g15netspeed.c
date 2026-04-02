@@ -26,6 +26,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/select.h>
 #include <libg15.h>
 #include <libg15render.h>
 #include <g15daemon_client.h>
@@ -380,12 +381,6 @@ int main(int argc, char *argv[]) {
 
     g15r_initCanvas(&canvas);
 
-    /* Socket nicht-blockierend machen für Tastenabfrage */
-    {
-        int flags = fcntl(g15_fd, F_GETFL, 0);
-        if (flags >= 0)
-            fcntl(g15_fd, F_SETFL, flags | O_NONBLOCK);
-    }
 
     /* Initiales Lesen der Bytes */
     fprintf(stderr, "Verbinde mit g15daemon... OK (fd=%d)\n", g15_fd);
@@ -406,17 +401,22 @@ int main(int argc, char *argv[]) {
         ts.tv_nsec = (UPDATE_MS % 1000) * 1000000L;
         nanosleep(&ts, NULL);
 
-        /* Tastenerkennung (nicht-blockierend) */
+        /* Tastenerkennung (nicht-blockierend via select) */
         {
-            int ret = g15_recv(g15_fd, (char *)&key_state, sizeof(key_state));
-            if (ret == sizeof(key_state)) {
-                if ((key_state & G1_KEY) && !(prev_key_state & G1_KEY)) {
-                    current_page = (current_page + 1) % NUM_PAGES;
-                    fprintf(stderr, "Seite gewechselt: %d\n", current_page);
+            fd_set readfds;
+            struct timeval tv = {0, 0};  /* sofort zurückkehren */
+            FD_ZERO(&readfds);
+            FD_SET(g15_fd, &readfds);
+            if (select(g15_fd + 1, &readfds, NULL, NULL, &tv) > 0) {
+                int ret = recv(g15_fd, (char *)&key_state, sizeof(key_state), 0);
+                if (ret == sizeof(key_state)) {
+                    if ((key_state & G1_KEY) && !(prev_key_state & G1_KEY)) {
+                        current_page = (current_page + 1) % NUM_PAGES;
+                        fprintf(stderr, "Seite gewechselt: %d\n", current_page);
+                    }
+                    prev_key_state = key_state;
                 }
-                prev_key_state = key_state;
             }
-            /* EAGAIN/EWOULDBLOCK ist normal bei O_NONBLOCK – ignorieren */
         }
 
         /* === Netzwerk-Daten immer sammeln === */
