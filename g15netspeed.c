@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <libg15.h>
 #include <libg15render.h>
 #include <g15daemon_client.h>
