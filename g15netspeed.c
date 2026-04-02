@@ -25,7 +25,7 @@
 #include <math.h>
 #include <time.h>
 #include <fcntl.h>
-#include <poll.h>
+#include <errno.h>
 #include <libg15.h>
 #include <libg15render.h>
 #include <g15daemon_client.h>
@@ -388,15 +388,17 @@ int main(int argc, char *argv[]) {
     }
 
     /* Initiales Lesen der Bytes */
+    fprintf(stderr, "Verbinde mit g15daemon... OK (fd=%d)\n", g15_fd);
+
     if (read_net_bytes(iface, &prev_rx, &prev_tx) != 0) {
         fprintf(stderr, "Fehler: Interface '%s' nicht gefunden in /proc/net/dev\n", iface);
         g15_close_screen(g15_fd);
         return 1;
     }
 
-    printf("g15netspeed gestartet für Interface: '%s'\n", iface);
-    printf("G1-Taste: Seiten umschalten (Netz/CPU/GPU/RAM)\n");
-    printf("Drücke Ctrl+C zum Beenden.\n");
+    fprintf(stderr, "g15netspeed gestartet für Interface: '%s'\n", iface);
+    fprintf(stderr, "G1-Taste: Seiten umschalten (Netz/CPU/GPU/RAM)\n");
+    fprintf(stderr, "Drücke Ctrl+C zum Beenden.\n");
 
     while (running) {
         struct timespec ts;
@@ -410,10 +412,11 @@ int main(int argc, char *argv[]) {
             if (ret == sizeof(key_state)) {
                 if ((key_state & G1_KEY) && !(prev_key_state & G1_KEY)) {
                     current_page = (current_page + 1) % NUM_PAGES;
-                    printf("Seite gewechselt: %d\n", current_page);
+                    fprintf(stderr, "Seite gewechselt: %d\n", current_page);
                 }
                 prev_key_state = key_state;
             }
+            /* EAGAIN/EWOULDBLOCK ist normal bei O_NONBLOCK – ignorieren */
         }
 
         /* === Netzwerk-Daten immer sammeln === */
@@ -607,6 +610,6 @@ int main(int argc, char *argv[]) {
     g15_send(g15_fd, (char *)canvas.buffer, G15_BUFFER_LEN);
     g15_close_screen(g15_fd);
 
-    printf("\ng15netspeed beendet. (Letzte Seite: %d)\n", current_page);
+    fprintf(stderr, "\ng15netspeed beendet. (Letzte Seite: %d)\n", current_page);
     return 0;
 }
