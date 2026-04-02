@@ -1,0 +1,344 @@
+
+# 2026-03-29 16:10:30.113955
++du kannst doch programmieren, oder? ich nutze folgende pakete in cachyos: g15daemon-git-local 3.0.4a.r3.g161db09-1 libg15-git 1.3.1.r0. g132f443-2 libg15render-git 1:1.3.1.r0.e432b21-1 um meine alte logitech g15 tastatur (display, licht, g tasten) anzusteuern. ich möchte gern in cachy ein plugin nutzen wie unter windows das g15netspeed, damit ich im display einen graphen für upload und download sehe
+
+# 2026-03-29 16:12:00.672953
++/run make
+
+# 2026-03-29 16:12:00.673025
++/run make
+
+# 2026-03-29 16:12:00.858744
++/run sudo ./g15netspeed enp5s0
+
+# 2026-03-29 16:12:00.858805
++/run sudo ./g15netspeed enp5s0
+
+# 2026-03-29 16:12:36.717902
++┌─[✔]─[💀 micha@mj-pc-mj-lnx]─[📁 /home/micha/Documents/G15]
++└─❯❯❯ make
++gcc -Wall -Wextra -O2 -o g15netspeed g15netspeed.c -lg15daemon_client -lg15render -lm
++g15netspeed.c: In Funktion »draw_graph«:
++g15netspeed.c:98:75: Fehler: »G15_PIXEL_NREV« nicht deklariert (erstmalige Verwendung in dieser Funktion); meinten Sie »G15_PIXEL_FILL«?
++   98 |     g15r_pixelBox(canvas, x - 1, y - 1, x + w, y + h, G15_COLOR_BLACK, 0, G15_PIXEL_NREV);
++      |                                                                           ^~~~~~~~~~~~~~
++      |                                                                           G15_PIXEL_FILL
++g15netspeed.c:98:75: Anmerkung: jeder nicht deklarierte Bezeichner wird nur einmal für jede Funktion, in der er vorkommt, gemeldet
++make: *** [Makefile:13: g15netspeed] Fehler 1
+
+# 2026-03-29 16:13:06.069964
++/run make
+
+# 2026-03-29 16:13:06.070065
++/run make
+
+# 2026-03-29 16:14:39.576382
++okay das plugin läuft und zeigt auch was an, jedoch sind die graphen nur schwarz und ich sehe keine zahlen. das interface ist bei mir enp7s0 ich hatte das programm mit ./g15netspeed enp7s0
++g15netspeed gestartet für Interface: enp7s0
++Drücke Ctrl+C zum Beenden. gestartet
+
+# 2026-03-29 16:16:07.331608
++/run make clean && make
+
+# 2026-03-29 16:16:07.331674
++/run make clean && make
+
+# 2026-03-29 16:16:07.611809
++/run ./g15netspeed enp7s0
+
+# 2026-03-29 16:16:07.611874
++/run ./g15netspeed enp7s0
+
+# 2026-03-29 16:16:58.957234
++erzeigt wieder keine werte an, die graphen sind jetzt durchsichtig. benötigt er rechte um die werte auszulesen?
+
+# 2026-03-29 16:17:25.629249
++/run make clean && make
+
+# 2026-03-29 16:17:25.629301
++/run make clean && make
+
+# 2026-03-29 16:17:25.884691
++/run ./g15netspeed enp7s0
+
+# 2026-03-29 16:17:25.884751
++/run ./g15netspeed enp7s0
+
+# 2026-03-29 16:17:47.048476
++und?
+
+# 2026-03-29 16:18:05.040480
++/clear
+
+# 2026-03-29 16:18:06.968602
++n
+
+# 2026-03-29 16:18:11.641524
++/clear
+
+# 2026-03-29 16:18:15.607925
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
++^CDL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4603903752 tx=31665608)
+
+# 2026-03-29 16:18:31.984541
++/run make clean && make
+
+# 2026-03-29 16:18:31.984575
++/run make clean && make
+
+# 2026-03-29 16:18:48.779684
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4604132715 tx=31726231)
+
+# 2026-03-29 16:19:07.456221
++/run make clean && make && ./g15netspeed 2>&1 | head -30
+
+# 2026-03-29 16:19:07.456273
++/run make clean && make && ./g15netspeed 2>&1 | head -30
+
+# 2026-03-29 16:19:38.562892
++irgendwas ist schiefgelaufen
+
+# 2026-03-29 16:19:47.370225
++/run cat /proc/net/dev
+
+# 2026-03-29 16:19:47.370276
++/run cat /proc/net/dev
+
+# 2026-03-29 16:19:49.866578
++/run ip -brief link show
+
+# 2026-03-29 16:19:49.866604
++/run ip -brief link show
+
+# 2026-03-29 16:20:01.668912
++kannst du das korrigieren?
+
+# 2026-03-29 16:20:12.699019
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:20:12.699074
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:20:17.133338
++n
+
+# 2026-03-29 16:20:19.839207
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4614453240 tx=31972240)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4614453240 tx=31972240)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4614453240 tx=31972240)
++DL: 0.00 KB/s  UL: 0.00 KB/s  (rx=4614453240 tx=31972240)
+
+# 2026-03-29 16:20:40.667409
++/run make clean && make && ./g15netspeed 2>&1 | head -10
+
+# 2026-03-29 16:20:40.667459
++/run make clean && make && ./g15netspeed 2>&1 | head -10
+
+# 2026-03-29 16:21:03.839171
++gleiches problem
+
+# 2026-03-29 16:21:24.887705
++/run make clean && make && ./g15netspeed 2>&1 | head -10
+
+# 2026-03-29 16:21:24.887728
++/run make clean && make && ./g15netspeed 2>&1 | head -10
+
+# 2026-03-29 16:22:14.825360
++krass es läuft. kannst du die aktualisierungsrate auf 250ms stellen?
+
+# 2026-03-29 16:22:22.704129
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:22:22.704180
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:23:10.515165
++n
+
+# 2026-03-29 16:23:39.804507
++kannst du noch eine doku des codes anlegen, sodass zukünftige anpassungen leicher von statten gehen?
+
+# 2026-03-29 16:30:23.577049
++ok, nur die bezeichnung des interfaces ist etwas zu lang und der D: x.xK ist etwas verdeckt. kannst du das ein bisschen nach rechts rücken?
+
+# 2026-03-29 16:30:39.207674
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:30:39.207727
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:31:58.964449
++geil. perfekt. könnte man den graphen noch so umbauen, dass dieser immer scrollt (nicht erst wenn er das ende erreicht hat) und dass dieser gefüllt ist (quasi aus mittelwerten besteht) weißt du was ich meine? erkläre mir zuerst änderungen, bevor du beginnst
+
+# 2026-03-29 16:32:39.341981
++ok
+
+# 2026-03-29 16:32:53.900039
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:32:53.900091
++/run make clean && make && ./g15netspeed
+
+# 2026-03-29 16:36:28.669050
++wie setze ich das plugin jetzt in den autostart?
+
+# 2026-03-29 16:37:54.064963
++n
+
+# 2026-03-29 16:40:55.271204
++┌─[✔]─[💀 micha@mj-pc-mj-lnx]─[📁 /home/micha/Documents/G15]
++└─❯❯❯ nano g15netspeed.service 
+
+# 2026-03-29 16:43:15.443256
++kannst du den upload graph umdrehen, sodass dieser nach unten ausschlägt. das sieht cool aus, dann kommen beide werte aus der mitte heraus
+
+# 2026-03-29 16:43:47.393509
++/run make clean && make
+
+# 2026-03-29 16:43:47.393565
++/run make clean && make
+
+# 2026-03-29 16:44:37.189054
++muss ich dann die datei in den service kopieren, oder ruft der service die datei im aktuellen pfad auf?
+
+# 2026-03-29 16:45:47.350851
++n
+
+# 2026-03-29 16:46:17.690280
++ahh ok cool. also immer make clean && make && sudo make install bei änderungen und dann ystemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:46:37.353033
++n
+
+# 2026-03-29 16:51:19.794431
++ich habe den code ein wenig angepasst. übernimm das bitte.
+
+# 2026-03-29 16:51:49.132220
++/add g15netspeed.c
+
+# 2026-03-29 16:52:43.997011
++du hast ja dl und ul links neben dem graphen stehen und oben drüber nochmal. kannst du drüber evtl. cpu gpu und ram auslastung schreiben? dann haben wir ein multi info board.
+
+# 2026-03-29 16:53:30.957854
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:53:30.957935
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:55:02.001047
++n
+
+# 2026-03-29 16:55:27.442073
++okay. richte den text rechtsbündig aus und schreibe links wieder das netzwerk interface, dass hast du entfernt
+
+# 2026-03-29 16:55:58.705313
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:55:58.705404
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:56:39.868967
++prima. schreibe CPU, GPU, RAM aus. und gpu liefert N/A
+
+# 2026-03-29 16:57:08.292546
++n
+
+# 2026-03-29 16:57:35.606554
++ich habe eine nvidia 4080super und nvidia smi oder auch nvitop installiert
+
+# 2026-03-29 16:58:17.608528
++/run nvidia-smi
+
+# 2026-03-29 16:58:17.608551
++/run nvidia-smi
+
+# 2026-03-29 16:58:17.772083
++/run ls /usr/lib/libnvidia-ml.so*
+
+# 2026-03-29 16:58:17.772176
++/run ls /usr/lib/libnvidia-ml.so*
+
+# 2026-03-29 16:58:35.226427
++/add Makefile
+
+# 2026-03-29 16:58:41.051076
++makefile ist drin
+
+# 2026-03-29 16:58:47.904842
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:58:47.904893
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:58:52.188384
++fehler
+
+# 2026-03-29 16:58:59.010319
++/run find /usr -name "nvml.h" 2>/dev/null
+
+# 2026-03-29 16:58:59.010332
++/run find /usr -name "nvml.h" 2>/dev/null
+
+# 2026-03-29 16:59:01.240190
++/run pacman -Ql nvidia-utils | grep nvml.h
+
+# 2026-03-29 16:59:01.240288
++/run pacman -Ql nvidia-utils | grep nvml.h
+
+# 2026-03-29 16:59:07.533586
++da ist der pfaf
+
+# 2026-03-29 16:59:27.373852
++/run pacman -Ss cuda | grep nvml
+
+# 2026-03-29 16:59:27.373905
++/run pacman -Ss cuda | grep nvml
+
+# 2026-03-29 16:59:28.492926
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:59:28.492982
++/run make clean && make && sudo make install && systemctl --user restart g15netspeed.service
+
+# 2026-03-29 16:59:53.745801
++läuft :)
+
+# 2026-03-29 17:00:21.684306
++readme und makefile ist aktuell?
+
+# 2026-03-29 17:00:39.133843
++/add Makefile
+
+# 2026-03-29 17:00:41.213689
++ist drin
+
+# 2026-03-30 07:32:37.173543
++kannst du mir ein prozess diagram meiner gnetspeed.c library und der resultierenden anwendung geben? also g15 tastatur -> hid device -> g15deamon -> g15netspeed - oder halt so, wie es wirklich ist, mit allen verästelungen.

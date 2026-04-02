@@ -1,0 +1,102 @@
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+
+#include <libg15.h>
+#include <g15daemon_client.h>
+#include <libg15render.h>
+
+#define IFACE "enp7s0"
+
+static unsigned long long read_counter(const char *path) {
+    FILE *f = fopen(path, "r");
+    unsigned long long val = 0;
+
+    if (!f) {
+        return 0;
+    }
+
+    if (fscanf(f, "%llu", &val) != 1) {
+        fclose(f);
+        return 0;
+    }
+
+    fclose(f);
+    return val;
+}
+
+static void format_rate(unsigned long long bytes_per_sec, char *out, size_t out_len) {
+    if (bytes_per_sec < 1024) {
+        snprintf(out, out_len, "%4llu B/s", bytes_per_sec);
+    } else if (bytes_per_sec < 1024ULL * 1024ULL) {
+        snprintf(out, out_len, "%4.1fK/s", (double)bytes_per_sec / 1024.0);
+    } else {
+        snprintf(out, out_len, "%4.1fM/s", (double)bytes_per_sec / 1024.0 / 1024.0);
+    }
+}
+
+int main(void) {
+    char rx_path[256];
+    char tx_path[256];
+
+    snprintf(rx_path, sizeof(rx_path), "/sys/class/net/%s/statistics/rx_bytes", IFACE);
+    snprintf(tx_path, sizeof(tx_path), "/sys/class/net/%s/statistics/tx_bytes", IFACE);
+
+    int fd = new_g15_screen(G15_G15RBUF);
+    if (fd < 0) {
+        perror("new_g15_screen");
+        return 1;
+    }
+
+    unsigned long long rx_old = read_counter(rx_path);
+    unsigned long long tx_old = read_counter(tx_path);
+
+    if (rx_old == 0 && tx_old == 0) {
+        fprintf(stderr, "Konnte Interface %s nicht lesen\n", IFACE);
+    }
+
+    while (1) {
+        sleep(1);
+
+        unsigned long long rx_new = read_counter(rx_path);
+        unsigned long long tx_new = read_counter(tx_path);
+
+        unsigned long long rx_rate = 0;
+        unsigned long long tx_rate = 0;
+
+        if (rx_new >= rx_old) {
+            rx_rate = rx_new - rx_old;
+        }
+
+        if (tx_new >= tx_old) {
+            tx_rate = tx_new - tx_old;
+        }
+
+        rx_old = rx_new;
+        tx_old = tx_new;
+
+        char down_str[32];
+        char up_str[32];
+        char line1[64];
+        char line2[64];
+
+        format_rate(rx_rate, down_str, sizeof(down_str));
+        format_rate(tx_rate, up_str, sizeof(up_str));
+
+        snprintf(line1, sizeof(line1), "DOWN %s", down_str);
+        snprintf(line2, sizeof(line2), "UP   %s", up_str);
+
+        g15canvas canvas;
+        memset(&canvas, 0, sizeof(canvas));
+        g15r_initCanvas(&canvas);
+
+        g15r_renderString(&canvas, (unsigned char *)line1, 0, 0,  G15_TEXT_SMALL, 0);
+        g15r_renderString(&canvas, (unsigned char *)line2, 0, 12, G15_TEXT_SMALL, 0);
+
+        g15_send(fd, (char *)canvas.buffer, G15_BUFFER_LEN);
+    }
+
+    close(fd);
+    return 0;
+}
