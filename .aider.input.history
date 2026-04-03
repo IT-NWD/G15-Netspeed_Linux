@@ -625,3 +625,64 @@
 
 # 2026-04-03 14:19:30.564289
 +/run git add -A && git commit -m "docs: README an aktuelle Werte und neue speed_unit/format_speed_value Funktionen anpassen"
+
+# 2026-04-03 14:22:18.809121
++ Okay, jetzt würde ich gerne noch ändern, dass ich die Ansichten nicht mit der G1-Taste umschalte, sondern mit dem ersten länglichen Knopf neben der Wahl-Taste. Bestätige mir, dass du weißt, welche Taste ich meine. Unter dem Display befinden sich vier ovale Tasten. Zudem möchte ich, dass du mir die Änderungen anzeigst, bevor du welche vornimmst. 
+
+# 2026-04-03 14:23:09.108734
++ Ich habe die Tools bereits installiert, womit ich die Tasten auslesen kann. Ich habe nur vergessen, welche Befehle das waren. Kannst du mir die nennen? 
+
+# 2026-04-03 14:23:49.357549
++n
+
+# 2026-04-03 14:23:56.625551
++/run grep -r "g15" /usr/bin/ /usr/local/bin/ 2>/dev/null | head -20
+
+# 2026-04-03 14:23:56.627487
++/run grep -r "g15" /usr/bin/ /usr/local/bin/ 2>/dev/null | head -20
+
+# 2026-04-03 14:24:20.079941
++/run pacman -Ql g15daemon libg15 | grep bin/
+
+# 2026-04-03 14:24:20.081313
++/run pacman -Ql g15daemon libg15 | grep bin/
+
+# 2026-04-03 14:24:26.423725
++n
+
+# 2026-04-03 14:25:31.013357
++hier müsste die taste dabei sein?!
++libg15: Keyboard: 2, 0, 80, 0, 0, 0, 0, 0, 0
++libg15: rl: 9 Ret: 9, xBuf[0]: 2
++libg15:     2
++libg15:     0
++libg15:     0
++libg15:     0
++libg15:     1
++libg15:     0
++libg15:     0
++libg15:     0
++libg15:     0
++libg15: Keyboard: 2, 0, 0, 0, 1, 0, 0, 0, 0
+
+# 2026-04-03 14:26:49.241909
++ Das bedeutet, ich sehe es, wenn ich die C-Dateien nicht als Daemon starte oder wie komme ich an die Informationen dann ran? Stört es die Programmierung an sich? Sollten wir nicht ein extra kleines Shell-Skript schreiben, um das zu debuggen? 
+
+# 2026-04-03 14:28:20.013846
++n
+
+# 2026-04-03 14:28:42.407625
++das sind die werte der tasten 1-4 der reihe nach. speichere diese für später ab:
++Key-State: 0x00800000  (dezimal: 8388608)
++Key-State: 0x01000000  (dezimal: 16777216)
++Key-State: 0x02000000  (dezimal: 33554432)
++Key-State: 0x04000000  (dezimal: 67108864)
+
+# 2026-04-03 14:29:46.577398
++n
+
+# 2026-04-03 14:30:17.973263
++/run git add -A && git commit -m "docs: README um L1_KEY-Konstante und Tastenbeschreibung ergänzen"
+
+# 2026-04-03 14:30:17.974628
++/run git add -A && git commit -m "docs: README um L1_KEY-Konstante und Tastenbeschreibung ergänzen"
