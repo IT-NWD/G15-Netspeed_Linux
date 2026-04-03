@@ -224,8 +224,7 @@ static int scan_interfaces(void) {
             /* "lo" (Loopback) überspringen */
             if (strcmp(name, "lo") == 0)
                 continue;
-            strncpy(iface_list[count], name, IFACE_NAME_LEN - 1);
-            iface_list[count][IFACE_NAME_LEN - 1] = '\0';
+            snprintf(iface_list[count], IFACE_NAME_LEN, "%s", name);
             count++;
         }
     }
