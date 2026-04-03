@@ -342,3 +342,286 @@
 
 # 2026-03-30 07:32:37.173543
 +kannst du mir ein prozess diagram meiner gnetspeed.c library und der resultierenden anwendung geben? also g15 tastatur -> hid device -> g15deamon -> g15netspeed - oder halt so, wie es wirklich ist, mit allen verästelungen.
+
+# 2026-04-02 19:47:52.216872
++Ich möchte Änderungen an der Anzeige vornehmen. Momentan wird der aktuelle Netzwerktraffic, die CPU-Auslastung,
++>  die GPU-Auslastung und die RAM-Auslastung angezeigt. Ich habe dabei vergessen, dass ich auch die bisher übertra
++> gene Datenmenge anzeigen möchte.  Kannst du also die Auslastung von CPU, GPU und RAM wieder entfernen und dafür
++> einen Zähler für Download und Upload einbauen. Das ist doch bestimmt möglich und wird irgendwo mitgeschnitten, o
++> der?  Fange nicht direkt an, das Projekt zu ändern. Gib mir erst eine Übersicht darüber, was du wie ändern möcht
++> est.
+
+# 2026-04-02 19:50:39.953088
++ Dazu habe ich gleich mehrere Fragen. Könnte man auch eine der vier Menütasten benutzen, um ein weiteres Untermenü für die Auslastung von CPU, GPU und RAM zu fertigen? Dann hätte ich gerne die übertragene Datenmenge seit Systemstart und nicht seit Programmstart. Die Datenmenge soll mit zwei Nachkommastellen ausgegeben werden, immer im bestmöglichen Format. Das heißt zu Beginn Kilobyte, dann Megabyte, dann Gigabyte und sollte es mal zu Terabyte kommen, dann Terabyte. Zudem hätte ich gerne, dass die Anzeige der aktuellen Download- und Uploadgeschwindigkeit im richtigen Format angegeben wird. Zum Beispiel Kilobyte die Sekunde, Megabyte die Sekunde und Gigabyte die Sekunde, was wir natürlich nie erreichen werden.  Gib mir dazu auch zuerst die Änderungsvorschläge. 
+
+# 2026-04-02 19:51:44.275980
++ Okay, um das Ganze noch etwas aufzutun, könnte man noch eine zweite, dritte und vierte Seite machen, wo jeweils zu CPU, GPU und RAM ein Diagramm wie auf Seite 1 fürs Netzwerk angezeigt wird. Was denkst du darüber? Ist das möglich? Gib mir auch hier bitte zuerst wieder deine Vorschläge. 
+
+# 2026-04-02 19:52:57.390841
++ Gute Idee. Auf Seite 1 könntest du die Temperatur in den zweiten Graphen reinsetzen. Ansonsten kannst du das genauso umsetzen, wie du es gerade geschrieben hast. Ich bin gespannt. 
+
+# 2026-04-02 20:01:25.737311
++n
+
+# 2026-04-02 20:01:42.945587
++ok, dann wende die blöcke auf die g15netspeed.c und Makefile an
+
+# 2026-04-02 20:29:57.166305
++/run make clean && make
+
+# 2026-04-02 20:29:57.213474
++/run make clean && make
+
+# 2026-04-02 20:41:22.852411
++das bin file startet nicht, es bleibt bei systemctl --user start g15netspeed.service hängen
+
+# 2026-04-02 20:46:18.939019
++/run journalctl --user -u g15netspeed.service -n 50 --no-pager
+
+# 2026-04-02 20:46:19.389888
++/run journalctl --user -u g15netspeed.service -n 50 --no-pager
+
+# 2026-04-02 20:46:26.963809
++/run make clean && make
+
+# 2026-04-02 20:46:26.972568
++/run make clean && make
+
+# 2026-04-02 20:46:27.270907
++/run sudo make install
+
+# 2026-04-02 20:46:27.272991
++/run sudo make install
+
+# 2026-04-02 20:46:33.232600
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:46:33.668134
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:47:08.845074
++/run journalctl --user -u g15netspeed.service -n 20 --no-pager
+
+# 2026-04-02 20:47:09.169919
++/run journalctl --user -u g15netspeed.service -n 20 --no-pager
+
+# 2026-04-02 20:47:21.891549
++läuft immer noch nicht
+
+# 2026-04-02 20:47:52.733762
++/run make clean && make
+
+# 2026-04-02 20:47:52.939999
++/run make clean && make
+
+# 2026-04-02 20:47:53.112526
++/run sudo make install
+
+# 2026-04-02 20:47:53.113549
++/run sudo make install
+
+# 2026-04-02 20:48:02.595007
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:48:03.836816
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:48:04.249322
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:48:04.251337
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:48:11.143204
++/run sleep 2
+
+# 2026-04-02 20:48:12.003143
++/run sleep 2
+
+# 2026-04-02 20:48:15.785963
++/run journalctl --user -u g15netspeed.service -n 20 --no-pager
+
+# 2026-04-02 20:48:16.136769
++/run journalctl --user -u g15netspeed.service -n 20 --no-pager
+
+# 2026-04-02 20:48:24.622442
++es gibt fehler bei make
+
+# 2026-04-02 20:48:40.706717
++/run make clean && make
+
+# 2026-04-02 20:48:41.099427
++/run make clean && make
+
+# 2026-04-02 20:48:41.833868
++/run sudo make install
+
+# 2026-04-02 20:48:41.835224
++/run sudo make install
+
+# 2026-04-02 20:48:47.667360
++/run cp g15netspeed.service ~/.config/systemd/user/g15netspeed.service
+
+# 2026-04-02 20:48:47.885890
++/run cp g15netspeed.service ~/.config/systemd/user/g15netspeed.service
+
+# 2026-04-02 20:48:48.062774
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:48:48.064481
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:48:48.361530
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:48:48.362652
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:48:56.200706
++.
+
+# 2026-04-02 20:49:14.329920
++/run cp g15netspeed.service ~/.config/systemd/user/g15netspeed.service
+
+# 2026-04-02 20:49:14.416751
++/run cp g15netspeed.service ~/.config/systemd/user/g15netspeed.service
+
+# 2026-04-02 20:49:14.564430
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:49:14.565780
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:49:14.973252
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:49:14.974997
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:49:15.115312
++/run journalctl --user -u g15netspeed.service -n 20 --no-pager
+
+# 2026-04-02 20:49:15.117333
++/run journalctl --user -u g15netspeed.service -n 20 --no-pager
+
+# 2026-04-02 20:49:21.161660
++wird nicht besser
+
+# 2026-04-02 20:49:36.918815
++/run cp g15netspeed.service ~/.config/systemd/user/g15netspeed.service
+
+# 2026-04-02 20:49:37.353502
++/run cp g15netspeed.service ~/.config/systemd/user/g15netspeed.service
+
+# 2026-04-02 20:49:37.654035
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:49:37.656219
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:49:38.089768
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:49:38.091565
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:49:38.250925
++/run journalctl --user -u g15netspeed.service -n 10 --no-pager
+
+# 2026-04-02 20:49:38.252935
++/run journalctl --user -u g15netspeed.service -n 10 --no-pager
+
+# 2026-04-02 20:49:46.753826
++n
+
+# 2026-04-02 20:49:52.378708
++/clear
+
+# 2026-04-02 20:50:04.940317
++Running systemctl --user restart g15netspeed.service
++Failed to restart g15netspeed.service: Unit g15netspeed.service has a bad unit file setting.
++See user logs and 'systemctl --user status g15netspeed.service' for details.
++
++Running journalctl --user -u g15netspeed.service -n 10 --no-pager
++Apr 02 20:49:14 mj-pc-mj-lnx systemd[1746]: /home/micha/.config/systemd/user/g15netspeed.service:1: Assignment outside of section. Ignoring.
++Apr 02 20:49:14 mj-pc-mj-lnx systemd[1746]: g15netspeed.service: Service has more than one ExecStart= setting, which is only allowed for Type=oneshot services. Refusing.
++Apr 02 20:49:34 mj-pc-mj-lnx systemd[1746]: g15netspeed.service: State 'stop-sigterm' timed out. Killing.
++Apr 02 20:49:34 mj-pc-mj-lnx systemd[1746]: g15netspeed.service: Killing process 58323 (g15netspeed) with signal SIGKILL.
++Apr 02 20:49:34 mj-pc-mj-lnx systemd[1746]: g15netspeed.service: Main process exited, code=killed, status=9/KILL
++Apr 02 20:49:34 mj-pc-mj-lnx systemd[1746]: g15netspeed.service: Failed with result 'timeout'.
++Apr 02 20:49:34 mj-pc-mj-lnx systemd[1746]: Stopped g15netspeed - Netzwerk-Geschwindigkeitsanzeige für G15 LCD.
++Apr 02 20:49:34 mj-pc-mj-lnx systemd[1746]: Failed to start g15netspeed - Netzwerk-Geschwindigkeitsanzeige für G15 LCD.
++Apr 02 20:49:37 mj-pc-mj-lnx systemd[1746]: /home/micha/.config/systemd/user/g15netspeed.service:1: Assignment outside of section. Ignoring.
++Apr 02 20:49:37 mj-pc-mj-lnx systemd[1746]: g15netspeed.service: Service has more than one ExecStart= setting, which is only allowed for Type=oneshot services. Refusing.
+
+# 2026-04-02 20:50:26.879009
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:50:27.041456
++/run systemctl --user daemon-reload
+
+# 2026-04-02 20:50:27.380367
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:50:27.382203
++/run systemctl --user restart g15netspeed.service
+
+# 2026-04-02 20:50:27.524842
++/run systemctl --user status g15netspeed.service
+
+# 2026-04-02 20:50:27.526560
++/run systemctl --user status g15netspeed.service
+
+# 2026-04-02 20:52:07.496543
++n
+
+# 2026-04-02 20:52:20.729406
++/add g15netspeed.service
+
+# 2026-04-02 20:52:30.419306
++was muss in die g15netspeed.service
+
+# 2026-04-02 20:53:07.291042
++n
+
+# 2026-04-02 20:53:22.499568
++zeige mir den code der in die g15netspeed.service rein muss!
+
+# 2026-04-02 20:55:22.904087
++/run printf '[Unit]\nDescription=g15netspeed - Netzwerk-Geschwindigkeitsanzeige für G15 LCD\nAfter=g15daemon.service\n\n[Service]\nType=simple\nExecStart=/usr/local/bin/g15netspeed\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=default.target\n' > g15netspeed.service
+
+# 2026-04-02 20:55:22.950578
++/run printf '[Unit]\nDescription=g15netspeed - Netzwerk-Geschwindigkeitsanzeige für G15 LCD\nAfter=g15daemon.service\n\n[Service]\nType=simple\nExecStart=/usr/local/bin/g15netspeed\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=default.target\n' > g15netspeed.service
+
+# 2026-04-02 21:15:57.507301
++/add README.md
+
+# 2026-04-02 21:17:23.958103
++gib mir eine übersicht über die vorhandenen funktionen
+
+# 2026-04-02 21:21:18.426590
++g15netspeed.c
+
+# 2026-04-02 21:21:44.057971
++/add g15netspeed.c
+
+# 2026-04-03 14:17:59.438347
++beachte, dass ich die g15netspeed.c angepasst habe! kannst du noch die aktuellen download-raten auf der linken seite nur mit einer nachkommastelle anzeigen und die darstellung dahingehend anpassen, 
+
+# 2026-04-03 14:18:12.334810
++beachte, dass ich die g15netspeed.c angepasst habe! kannst du noch die aktuellen download-raten auf der linken seite nur mit einer nachkommastelle anzeigen und die darstellung dahingehend anpassen,  dass hinter dl und ul in Klammern die Einheit steht und die Zahl unten drunter ohne Einheit angezeigt wird, sodass ich den Graphen etwas breiter machen kann. 
+
+# 2026-04-03 14:18:49.492051
++/run make clean && make
+
+# 2026-04-03 14:18:49.493245
++/run make clean && make
+
+# 2026-04-03 14:19:05.098595
++ Okay, kannst du alles committen und auch die README und das MAKE-File und so updaten? 
+
+# 2026-04-03 14:19:30.562897
++/run git add -A && git commit -m "docs: README an aktuelle Werte und neue speed_unit/format_speed_value Funktionen anpassen"
+
+# 2026-04-03 14:19:30.564289
++/run git add -A && git commit -m "docs: README an aktuelle Werte und neue speed_unit/format_speed_value Funktionen anpassen"
