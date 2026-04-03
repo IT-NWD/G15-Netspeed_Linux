@@ -402,4 +402,4 @@ systemctl --user disable g15netspeed.service
 
 ## Lizenz
 
-Frei verwendbar. Keine Lizenz angegeben.
+Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details.
