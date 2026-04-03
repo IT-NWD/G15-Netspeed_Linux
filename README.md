@@ -43,17 +43,17 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 
 | Taste | Funktion                                              |
 |-------|-------------------------------------------------------|
-| L1    | Seite umschalten (Netzwerk → CPU → GPU → RAM)        |
+| L1    | Seite umschalten (Netzwerk → CPU → GPU → RAM)         |
 | L2    | Interface wechseln (nur auf der Netzwerk-Seite)       |
 
 ## Architektur & Prozessdiagramm
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              HARDWARE                                       │
-│                                                                             │
+┌────────────────────────────────────────────────────────────────────────────┐
+│                              HARDWARE                                      │
+│                                                                            │
 │   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐       │
-│   │ Logitech G15 │         │   CPU / RAM   │         │  NVIDIA GPU  │       │
+│   │ Logitech G15 │         │   CPU / RAM  │         │  NVIDIA GPU  │       │
 │   │  (USB HID)   │         │              │         │              │       │
 │   └──────┬───────┘         └──────┬───────┘         └──────┬───────┘       │
 │          │ USB                    │                        │               │
@@ -62,29 +62,29 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 ┌──────────┼────────────────────────┼────────────────────────┼───────────────┐
 │          │              LINUX KERNEL                       │               │
 │          ▼                        │                        │               │
-│   ┌──────────────┐               │                        │               │
-│   │  HID Driver  │               ▼                        ▼               │
-│   │  (usbhid)    │        ┌─────────────┐         ┌─────────────┐        │
-│   └──────┬───────┘        │ /proc/stat  │         │ nvidia.ko   │        │
-│          │                │ /proc/meminfo│         │ (Kernel Mod)│        │
-│          │                │ /proc/net/dev│         └──────┬──────┘        │
-│          │                └──────┬──────┘                │               │
-│          │ /dev/hidrawX          │ procfs                │               │
-└──────────┼───────────────────────┼────────────────────────┼───────────────┘
+│   ┌──────────────┐                │                        │               │
+│   │  HID Driver  │                ▼                        ▼               │
+│   │  (usbhid)    │        ┌──────────────┐         ┌─────────────┐         │
+│   └──────┬───────┘        │ /proc/stat   │         │ nvidia.ko   │         │
+│          │                │ /proc/meminfo│         │ (Kernel Mod)│         │
+│          │                │ /proc/net/dev│         └──────┬──────┘         │
+│          │                └──────┬───────┘                │                │
+│          │ /dev/hidrawX          │ procfs                 │                │
+└──────────┼───────────────────────┼────────────────────────┼────────────────┘
            │                       │                        │
 ┌──────────┼───────────────────────┼────────────────────────┼───────────────┐
 │          │             USERSPACE DAEMONS / TOOLS          │               │
 │          ▼                       │                        ▼               │
-│   ┌──────────────┐               │                 ┌─────────────┐       │
-│   │  g15daemon   │               │                 │ nvidia-smi  │       │
-│   │  (Daemon)    │               │                 │ (CLI Tool)  │       │
-│   │              │               │                 └──────┬──────┘       │
-│   │ • LCD-Mux    │               │                        │ popen()     │
-│   │ • Client-Mgmt│               │                        │              │
-│   └──────┬───────┘               │                        │              │
-│          │ Unix Socket           │                        │              │
-│          │ (localhost:15550)      │                        │              │
-└──────────┼───────────────────────┼────────────────────────┼──────────────┘
+│   ┌──────────────┐               │                 ┌─────────────┐        │
+│   │  g15daemon   │               │                 │ nvidia-smi  │        │
+│   │  (Daemon)    │               │                 │ (CLI Tool)  │        │
+│   │              │               │                 └──────┬──────┘        │
+│   │ • LCD-Mux    │               │                        │ popen()       │
+│   │ • Client-Mgmt│               │                        │               │
+│   └──────┬───────┘               │                        │               │
+│          │ Unix Socket           │                        │               │
+│          │ (localhost:15550)     │                        │               │
+└──────────┼───────────────────────┼────────────────────────┼───────────────┘
            │                       │                        │
 ┌──────────┼───────────────────────┼────────────────────────┼──────────────┐
 │          │            SHARED LIBRARIES                    │              │
@@ -113,55 +113,55 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 │   │   ┌──────────────────────────┼────────────────────────┼────────┐  │  │
 │   │   │              Datenquellen lesen                   │        │  │  │
 │   │   │                          │                        │        │  │  │
-│   │   │  read_net_bytes() ◄──────┘ fopen("/proc/net/dev")│        │  │  │
+│   │   │  read_net_bytes() ◄──────┘ fopen("/proc/net/dev") │        │  │  │
 │   │   │       │                                           │        │  │  │
 │   │   │       ├── rx_bytes (Download)                     │        │  │  │
 │   │   │       └── tx_bytes (Upload)                       │        │  │  │
 │   │   │                                                   │        │  │  │
-│   │   │  read_cpu_usage() ◄──── fopen("/proc/stat")      │        │  │  │
+│   │   │  read_cpu_usage() ◄──── fopen("/proc/stat")       │        │  │  │
 │   │   │       └── CPU % (Differenz-Methode)               │        │  │  │
 │   │   │                                                   │        │  │  │
-│   │   │  read_ram_usage() ◄──── fopen("/proc/meminfo")   │        │  │  │
+│   │   │  read_ram_usage() ◄──── fopen("/proc/meminfo")    │        │  │  │
 │   │   │       └── RAM %                                   │        │  │  │
 │   │   │                                                   │        │  │  │
-│   │   │  read_gpu_usage() ◄──────────────────────────────┘        │  │  │
-│   │   │       └── GPU % (popen("nvidia-smi"), 1s Cache)           │  │  │
-│   │   └───────────────────────────────────────────────────────────┘  │  │
-│   │                          │                                       │  │
-│   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
+│   │   │  read_gpu_usage() ◄───────────────────────────────┘        │  │  │
+│   │   │       └── GPU % (popen("nvidia-smi"), 1s Cache)            │  │  │
+│   │   └────────────────────────────────────────────────────────────┘  │  │
+│   │                          │                                        │  │
+│   │   ┌──────────────────────▼─────────────────────────────────────┐  │  │
 │   │   │              Datenverarbeitung                             │  │  │
-│   │   │                                                           │  │  │
-│   │   │  • KB/s berechnen: (diff / 1024) * (1000 / UPDATE_MS)    │  │  │
-│   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=126)        │  │  │
-│   │   │  • find_max() → dynamische Y-Skalierung                  │  │  │
-│   │   │  • speed_unit() → "KB/s", "MB/s", "GB/s"                │  │  │
-│   │   │  • format_speed_value() → "1.2", "45.3", "3.5"          │  │  │
-│   │   └──────────────────────┬────────────────────────────────────┘  │  │
-│   │                          │                                       │  │
-│   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
-│   │   │              Rendering (libg15render)                     │  │  │
-│   │   │                                                           │  │  │
-│   │   │  g15r_clearScreen()                                       │  │  │
-│   │   │  g15r_renderString() → Interface, CPU%, GPU%, RAM%       │  │  │
-│   │   │  g15r_renderString() → "DL", "UL", Speed-Labels         │  │  │
-│   │   │  draw_graph()        → DL-Graph (y=10, wächst ↑)        │  │  │
-│   │   │  g15r_drawLine()     → Trennlinie (y=27)                │  │  │
-│   │   │  draw_graph()        → UL-Graph (y=28, invertiert ↓)    │  │  │
-│   │   └──────────────────────┬────────────────────────────────────┘  │  │
-│   │                          │                                       │  │
-│   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
-│   │   │              Ausgabe (g15daemon_client)                   │  │  │
-│   │   │                                                           │  │  │
-│   │   │  g15_send(fd, canvas.buffer, G15_BUFFER_LEN)             │  │  │
-│   │   │       │                                                   │  │  │
-│   │   │       └──► Unix Socket ──► g15daemon ──► USB ──► G15 LCD │  │  │
-│   │   └───────────────────────────────────────────────────────────┘  │  │
-│   │                                                                  │  │
-│   │   Hauptschleife: alle 150ms (UPDATE_MS) wiederholen              │  │
-│   └──────────────────────────────────────────────────────────────────┘  │
-│                                                                         │
-│   Signal-Handler: SIGINT/SIGTERM → running=0 → Cleanup & Exit          │
-└─────────────────────────────────────────────────────────────────────────┘
+│   │   │                                                            │  │  │
+│   │   │  • KB/s berechnen: (diff / 1024) * (1000 / UPDATE_MS)      │  │  │
+│   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=126)          │  │  │
+│   │   │  • find_max() → dynamische Y-Skalierung                    │  │  │
+│   │   │  • speed_unit() → "KB/s", "MB/s", "GB/s"                   │  │  │
+│   │   │  • format_speed_value() → "1.2", "45.3", "3.5"             │  │  │
+│   │   └──────────────────────┬─────────────────────────────────────┘  │  │
+│   │                          │                                        │  │
+│   │   ┌──────────────────────▼────────────────────────────────────┐   │  │
+│   │   │              Rendering (libg15render)                     │   │  │
+│   │   │                                                           │   │  │
+│   │   │  g15r_clearScreen()                                       │   │  │
+│   │   │  g15r_renderString() → Interface, CPU%, GPU%, RAM%        │   │  │
+│   │   │  g15r_renderString() → "DL", "UL", Speed-Labels           │   │  │
+│   │   │  draw_graph()        → DL-Graph (y=10, wächst ↑)          │   │  │
+│   │   │  g15r_drawLine()     → Trennlinie (y=27)                  │   │  │
+│   │   │  draw_graph()        → UL-Graph (y=28, invertiert ↓)      │   │  │
+│   │   └──────────────────────┬────────────────────────────────────┘   │  │
+│   │                          │                                        │  │
+│   │   ┌──────────────────────▼────────────────────────────────────┐   │  │
+│   │   │              Ausgabe (g15daemon_client)                   │   │  │
+│   │   │                                                           │   │  │
+│   │   │  g15_send(fd, canvas.buffer, G15_BUFFER_LEN)              │   │  │
+│   │   │       │                                                   │   │  │
+│   │   │       └──► Unix Socket ──► g15daemon ──► USB ──► G15 LCD  │   │  │
+│   │   └───────────────────────────────────────────────────────────┘   │  │
+│   │                                                                   │  │
+│   │   Hauptschleife: alle 150ms (UPDATE_MS) wiederholen               │  │
+│   └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│   Signal-Handler: SIGINT/SIGTERM → running=0 → Cleanup & Exit            │
+└──────────────────────────────────────────────────────────────────────────┘
 
 
 Datenfluss-Zusammenfassung:
@@ -172,33 +172,33 @@ Datenfluss-Zusammenfassung:
   /proc/net/dev ──────► read_net_bytes() ──┤
                                            ▼
                                     ┌─────────────┐
-                                    │  Berechnung  │
-                                    │  & History   │
+                                    │  Berechnung │
+                                    │  & History  │
                                     └──────┬──────┘
                                            ▼
                                     ┌─────────────┐
-                                    │ libg15render │
-                                    │  (Canvas)    │
+                                    │ libg15render│
+                                    │  (Canvas)   │
                                     └──────┬──────┘
                                            ▼
                                     ┌──────────────────┐
-                                    │ g15daemon_client  │
-                                    │  g15_send()       │
+                                    │ g15daemon_client │
+                                    │  g15_send()      │
                                     └──────┬───────────┘
                                            ▼
                                     ┌─────────────┐
-                                    │  g15daemon   │
-                                    │  (Socket)    │
+                                    │  g15daemon  │
+                                    │  (Socket)   │
                                     └──────┬──────┘
                                            ▼
                                     ┌─────────────┐
-                                    │   libg15     │
-                                    │  (USB HID)   │
+                                    │   libg15    │
+                                    │  (USB HID)  │
                                     └──────┬──────┘
                                            ▼
                                     ┌─────────────┐
-                                    │  G15 LCD     │
-                                    │  (160×43px)  │
+                                    │  G15 LCD    │
+                                    │  (160×43px) │
                                     └─────────────┘
 ```
 
@@ -219,15 +219,15 @@ Datenfluss-Zusammenfassung:
 | Konstante        | Wert    | Beschreibung                                                        |
 |------------------|---------|---------------------------------------------------------------------|
 | `LCD_WIDTH`      | 160     | Breite des G15-LCD in Pixeln                                        |
-| `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                         |
-| `GRAPH_WIDTH`    | 126     | Breite der Graphen in Pixeln                                        |
+| `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                          |
+| `GRAPH_WIDTH`    | 124     | Breite der Graphen in Pixeln                                        |
 | `GRAPH_HEIGHT`   | 16      | Höhe des Download-Graphen in Pixeln                                 |
-| `GRAPH_X`        | 33      | X-Position beider Graphen (Platz links für Labels)                  |
-| `HISTORY_SIZE`   | 126     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
+| `GRAPH_X`        | 35      | X-Position beider Graphen (Platz links für Labels)                  |
+| `HISTORY_SIZE`   | 126     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                    |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
 | `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
-| `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste, Seitenumschaltung) |
-| `L2_KEY`         | 0x01000000 | Tastaturcode für die L2-Taste (2. LCD-Taste, Interface-Wechsel) |
+| `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste, Seitenumschaltung)  |
+| `L2_KEY`         | 0x01000000 | Tastaturcode für die L2-Taste (2. LCD-Taste, Interface-Wechsel)  |
 | `MAX_IFACES`     | 32         | Maximale Anzahl erkannter Netzwerk-Interfaces                    |
 | `IFACE_NAME_LEN` | 32         | Maximale Länge eines Interface-Namens                            |
 
@@ -308,7 +308,7 @@ Datenfluss-Zusammenfassung:
 
 ```
 +----------------------------------------------------------+ y=0
-| enp7s0                        D:1.23GB U:256.00MB       |
+| enp7s0                        D:1.23GB U:256.00MB        |
 +----------------------------------------------------------+
 | DL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=10..25
 | 1.2     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↑)

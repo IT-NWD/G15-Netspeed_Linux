@@ -3,4 +3,4 @@
 
 # Build-Artefakte
 g15netspeed
-*.o
+g15netspeed.c.old
