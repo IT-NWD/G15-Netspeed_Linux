@@ -209,7 +209,7 @@ static int read_swap_usage(void) {
 static int scan_interfaces(void) {
     FILE *fp;
     char line[512];
-    char name[128];
+    char name[IFACE_NAME_LEN];
     int count = 0;
 
     fp = fopen("/proc/net/dev", "r");
