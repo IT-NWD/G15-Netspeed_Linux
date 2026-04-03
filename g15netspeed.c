@@ -34,9 +34,9 @@
 
 #define LCD_WIDTH      160
 #define LCD_HEIGHT     43
-#define GRAPH_WIDTH    124
+#define GRAPH_WIDTH    131
 #define GRAPH_HEIGHT   16
-#define GRAPH_X        35
+#define GRAPH_X        28
 #define HISTORY_SIZE   GRAPH_WIDTH
 #define UPDATE_MS      150
 #define DEFAULT_IFACE  "enp7s0"
@@ -240,14 +240,24 @@ static int read_net_bytes(const char *iface, unsigned long long *rx, unsigned lo
     return found ? 0 : -1;
 }
 
-/* Formatierte Geschwindigkeit als String (KB/s, MB/s, GB/s) */
-static void format_speed(double kbps, char *buf, size_t len) {
+/* Einheit für Geschwindigkeit bestimmen */
+static const char *speed_unit(double kbps) {
     if (kbps >= 1048576.0)
-        snprintf(buf, len, "%.2fGB/s", kbps / 1048576.0);
+        return "GB/s";
     else if (kbps >= 1024.0)
-        snprintf(buf, len, "%.2fMB/s", kbps / 1024.0);
+        return "MB/s";
     else
-        snprintf(buf, len, "%.2fKB/s", kbps);
+        return "KB/s";
+}
+
+/* Zahlenwert der Geschwindigkeit (in passender Einheit, 1 Nachkommastelle) */
+static void format_speed_value(double kbps, char *buf, size_t len) {
+    if (kbps >= 1048576.0)
+        snprintf(buf, len, "%.1f", kbps / 1048576.0);
+    else if (kbps >= 1024.0)
+        snprintf(buf, len, "%.1f", kbps / 1024.0);
+    else
+        snprintf(buf, len, "%.1f", kbps);
 }
 
 /* Formatierte Datenmenge als String (KB, MB, GB, TB) – immer 2 Nachkommastellen */
@@ -465,8 +475,8 @@ int main(int argc, char *argv[]) {
             if (dl_max < 10.0) dl_max = 10.0;
             if (ul_max < 10.0) ul_max = 10.0;
 
-            format_speed(dl_kbps, dl_str, sizeof(dl_str));
-            format_speed(ul_kbps, ul_str, sizeof(ul_str));
+            format_speed_value(dl_kbps, dl_str, sizeof(dl_str));
+            format_speed_value(ul_kbps, ul_str, sizeof(ul_str));
             format_bytes(curr_rx, dl_total_str, sizeof(dl_total_str));
             format_bytes(curr_tx, ul_total_str, sizeof(ul_total_str));
 
@@ -481,7 +491,11 @@ int main(int argc, char *argv[]) {
                               LCD_WIDTH - (int)strlen(title) * 5, 0);
 
             /* Download-Graph */
-            g15r_renderString(&canvas, (unsigned char *)"DL", 0, G15_TEXT_SMALL, 1, 10);
+            {
+                char dl_label[16];
+                snprintf(dl_label, sizeof(dl_label), "DL(%s)", speed_unit(dl_kbps));
+                g15r_renderString(&canvas, (unsigned char *)dl_label, 0, G15_TEXT_SMALL, 1, 10);
+            }
             g15r_renderString(&canvas, (unsigned char *)dl_str, 0, G15_TEXT_SMALL, 1, 18);
             draw_graph(&canvas, dl_history, dl_count,
                        GRAPH_X, 10, GRAPH_WIDTH, GRAPH_HEIGHT, dl_max, 0);
@@ -490,7 +504,11 @@ int main(int argc, char *argv[]) {
             g15r_drawLine(&canvas, 0, 27, LCD_WIDTH - 1, 27, G15_COLOR_BLACK);
 
             /* Upload-Graph (invertiert) */
-            g15r_renderString(&canvas, (unsigned char *)"UL", 0, G15_TEXT_SMALL, 1, 29);
+            {
+                char ul_label[16];
+                snprintf(ul_label, sizeof(ul_label), "UL(%s)", speed_unit(ul_kbps));
+                g15r_renderString(&canvas, (unsigned char *)ul_label, 0, G15_TEXT_SMALL, 1, 29);
+            }
             g15r_renderString(&canvas, (unsigned char *)ul_str, 0, G15_TEXT_SMALL, 1, 36);
             draw_graph(&canvas, ul_history, ul_count,
                        GRAPH_X, 28, GRAPH_WIDTH, 14, ul_max, 1);
