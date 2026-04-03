@@ -125,9 +125,10 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 │   │   │              Datenverarbeitung                             │  │  │
 │   │   │                                                           │  │  │
 │   │   │  • KB/s berechnen: (diff / 1024) * (1000 / UPDATE_MS)    │  │  │
-│   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=139)        │  │  │
+│   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=126)        │  │  │
 │   │   │  • find_max() → dynamische Y-Skalierung                  │  │  │
-│   │   │  • format_speed() → "1.2M", "45K", "3.5K"               │  │  │
+│   │   │  • speed_unit() → "KB/s", "MB/s", "GB/s"                │  │  │
+│   │   │  • format_speed_value() → "1.2", "45.3", "3.5"          │  │  │
 │   │   └──────────────────────┬────────────────────────────────────┘  │  │
 │   │                          │                                       │  │
 │   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
@@ -198,11 +199,13 @@ Datenfluss-Zusammenfassung:
 
 ### Dateistruktur
 
-| Datei              | Beschreibung                          |
-|--------------------|---------------------------------------|
-| `g15netspeed.c`    | Gesamter Quellcode (Single-File)      |
-| `Makefile`         | Build-System                          |
-| `README.md`        | Diese Dokumentation                   |
+| Datei                  | Beschreibung                                      |
+|------------------------|---------------------------------------------------|
+| `g15netspeed.c`        | Gesamter Quellcode (Single-File)                  |
+| `g15keytest.c`         | Debug-Tool zum Auslesen der G15-Tastencodes       |
+| `Makefile`             | Build-System                                      |
+| `g15netspeed.service`  | systemd-User-Unit für Autostart                   |
+| `README.md`            | Diese Dokumentation                               |
 
 ### Konfigurierbare Konstanten (`#define`)
 
@@ -212,8 +215,6 @@ Datenfluss-Zusammenfassung:
 | `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                         |
 | `GRAPH_WIDTH`    | 126     | Breite der Graphen in Pixeln                                        |
 | `GRAPH_HEIGHT`   | 16      | Höhe des Download-Graphen in Pixeln                                 |
-| `GRAPH_DL_Y`     | 2       | Y-Position des Download-Graphen (derzeit unbenutzt, siehe Layout)   |
-| `GRAPH_UL_Y`     | 24      | Y-Position des Upload-Graphen (derzeit unbenutzt, siehe Layout)     |
 | `GRAPH_X`        | 33      | X-Position beider Graphen (Platz links für Labels)                  |
 | `HISTORY_SIZE`   | 126     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
@@ -288,7 +289,7 @@ Datenfluss-Zusammenfassung:
 
 ```
 +----------------------------------------------------------+ y=0
-| enp7s0                   CPU:45% GPU:30% RAM:62%        |
+| enp7s0                        D:1.23GB U:256.00MB       |
 +----------------------------------------------------------+
 | DL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=10..25
 | 1.2     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↑)
@@ -299,7 +300,7 @@ Datenfluss-Zusammenfassung:
          x=33                                        x=159
 ```
 
-- **Zeile 0:** Interface-Name (links) und Gesamtdatenmenge DL/UL (rechts)
+- **Zeile 0:** Interface-Name (links) und Gesamtdatenmenge D:/U: (rechts)
 - **y=10–25:** Download-Graph mit Label inkl. Einheit links, Zahlenwert darunter (wächst nach oben)
 - **y=27:** Horizontale Trennlinie
 - **y=28–41:** Upload-Graph (invertiert, wächst nach unten von der Trennlinie aus) mit Label inkl. Einheit links, Zahlenwert darunter
