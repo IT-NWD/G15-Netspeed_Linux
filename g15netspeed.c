@@ -41,7 +41,7 @@
 #define UPDATE_MS      150
 #define DEFAULT_IFACE  "enp7s0"
 #define NUM_PAGES      4
-#define G1_KEY         0x01
+#define L1_KEY         0x00800000
 
 static volatile int running = 1;
 static int current_page = 0;
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "g15netspeed gestartet für Interface: '%s'\n", iface);
-    fprintf(stderr, "G1-Taste: Seiten umschalten (Netz/CPU/GPU/RAM)\n");
+    fprintf(stderr, "L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)\n");
     fprintf(stderr, "Drücke Ctrl+C zum Beenden.\n");
 
     while (running) {
@@ -421,7 +421,7 @@ int main(int argc, char *argv[]) {
             if (select(g15_fd + 1, &readfds, NULL, NULL, &tv) > 0) {
                 int ret = recv(g15_fd, (char *)&key_state, sizeof(key_state), 0);
                 if (ret == sizeof(key_state)) {
-                    if ((key_state & G1_KEY) && !(prev_key_state & G1_KEY)) {
+                    if ((key_state & L1_KEY) && !(prev_key_state & L1_KEY)) {
                         current_page = (current_page + 1) % NUM_PAGES;
                         fprintf(stderr, "Seite gewechselt: %d\n", current_page);
                     }
