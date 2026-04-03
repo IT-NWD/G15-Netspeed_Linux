@@ -218,6 +218,7 @@ Datenfluss-Zusammenfassung:
 | `HISTORY_SIZE`   | 131     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
 | `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
+| `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste unter dem Display)   |
 
 ### Funktionen
 

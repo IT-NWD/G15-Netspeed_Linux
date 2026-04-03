@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "g15netspeed gestartet für Interface: '%s'\n", iface);
-    fprintf(stderr, "L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)\n");
+    L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)
     fprintf(stderr, "Drücke Ctrl+C zum Beenden.\n");
 
     while (running) {
