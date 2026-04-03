@@ -686,3 +686,15 @@
 
 # 2026-04-03 14:30:17.974628
 +/run git add -A && git commit -m "docs: README um L1_KEY-Konstante und Tastenbeschreibung ergänzen"
+
+# 2026-04-03 14:31:03.071464
++  Hast du das README-File richtig aktualisieren können? Es kamen einige Fehler hoch während der ganzen Ereignisse. Trotz alledem funktioniert der Wechsel mit der ersten Taste schon einmal. Kompilieren konnte ich das ohne Probleme. 
+
+# 2026-04-03 14:31:31.941896
++n
+
+# 2026-04-03 14:31:51.330214
++/run git add -A && git commit -m "docs: README bereinigen - veraltete Konstanten, Layout und Funktionsreferenzen korrigieren"
+
+# 2026-04-03 14:31:51.332417
++/run git add -A && git commit -m "docs: README bereinigen - veraltete Konstanten, Layout und Funktionsreferenzen korrigieren"
