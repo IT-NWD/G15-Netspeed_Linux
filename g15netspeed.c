@@ -25,6 +25,7 @@
 #include <math.h>
 #include <time.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -136,10 +137,77 @@ static int read_gpu_usage(void) {
     return cached_usage;
 }
 
+/* CPU-Temperatur-Sensor in /sys/class/hwmon/ finden (coretemp oder k10temp) */
+static int find_cpu_temp_hwmon(char *path, size_t path_len) {
+    DIR *dir;
+    struct dirent *entry;
+    char name_path[256];
+    char name[64];
+    FILE *fp;
+
+    dir = opendir("/sys/class/hwmon");
+    if (!dir) return 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') continue;
+
+        snprintf(name_path, sizeof(name_path), "/sys/class/hwmon/%s/name", entry->d_name);
+        fp = fopen(name_path, "r");
+        if (!fp) continue;
+
+        name[0] = '\0';
+        if (fscanf(fp, "%63s", name) != 1) name[0] = '\0';
+        fclose(fp);
+
+        /* coretemp (Intel) oder k10temp (AMD) = CPU-Package-Temperatur */
+        if (strcmp(name, "coretemp") == 0 || strcmp(name, "k10temp") == 0) {
+            snprintf(path, path_len, "/sys/class/hwmon/%s/temp1_input", entry->d_name);
+            closedir(dir);
+            return 1;
+        }
+    }
+    closedir(dir);
+    return 0;
+}
+
+/* CPU-Temperatur-Sensor in /sys/class/thermal/ finden (x86_pkg_temp) */
+static int find_cpu_temp_thermal(char *path, size_t path_len) {
+    DIR *dir;
+    struct dirent *entry;
+    char type_path[256];
+    char type[64];
+    FILE *fp;
+
+    dir = opendir("/sys/class/thermal");
+    if (!dir) return 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strncmp(entry->d_name, "thermal_zone", 12) != 0) continue;
+
+        snprintf(type_path, sizeof(type_path), "/sys/class/thermal/%s/type", entry->d_name);
+        fp = fopen(type_path, "r");
+        if (!fp) continue;
+
+        type[0] = '\0';
+        if (fscanf(fp, "%63s", type) != 1) type[0] = '\0';
+        fclose(fp);
+
+        if (strcmp(type, "x86_pkg_temp") == 0) {
+            snprintf(path, path_len, "/sys/class/thermal/%s/temp", entry->d_name);
+            closedir(dir);
+            return 1;
+        }
+    }
+    closedir(dir);
+    return 0;
+}
+
 /* CPU-Temperatur aus /sys lesen (Rückgabe: Grad Celsius, 0 bei Fehler) */
 static int read_cpu_temp(void) {
     static int cached_temp = 0;
     static struct timespec last_read = {0, 0};
+    static char sensor_path[256] = "";
+    static int sensor_searched = 0;
     struct timespec now;
     FILE *fp;
     int temp;
@@ -148,9 +216,22 @@ static int read_cpu_temp(void) {
     if (cached_temp > 0 && (now.tv_sec - last_read.tv_sec) < 1)
         return cached_temp;
 
-    fp = fopen("/sys/class/thermal/thermal_zone0/temp", "r");
-    if (!fp)
-        fp = fopen("/sys/class/hwmon/hwmon0/temp1_input", "r");
+    /* Sensor-Pfad einmalig suchen */
+    if (!sensor_searched) {
+        sensor_searched = 1;
+        if (find_cpu_temp_hwmon(sensor_path, sizeof(sensor_path))) {
+            fprintf(stderr, "CPU-Temp-Sensor gefunden: %s\n", sensor_path);
+        } else if (find_cpu_temp_thermal(sensor_path, sizeof(sensor_path))) {
+            fprintf(stderr, "CPU-Temp-Sensor gefunden: %s\n", sensor_path);
+        } else {
+            /* Letzter Fallback */
+            snprintf(sensor_path, sizeof(sensor_path),
+                     "/sys/class/thermal/thermal_zone0/temp");
+            fprintf(stderr, "CPU-Temp-Sensor: Fallback auf %s\n", sensor_path);
+        }
+    }
+
+    fp = fopen(sensor_path, "r");
     if (fp) {
         if (fscanf(fp, "%d", &temp) == 1)
             cached_temp = temp / 1000;
