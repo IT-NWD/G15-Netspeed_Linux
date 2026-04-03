@@ -34,9 +34,9 @@
 
 #define LCD_WIDTH      160
 #define LCD_HEIGHT     43
-#define GRAPH_WIDTH    131
+#define GRAPH_WIDTH    126
 #define GRAPH_HEIGHT   16
-#define GRAPH_X        28
+#define GRAPH_X        33
 #define HISTORY_SIZE   GRAPH_WIDTH
 #define UPDATE_MS      150
 #define DEFAULT_IFACE  "enp7s0"
