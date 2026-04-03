@@ -698,3 +698,116 @@
 
 # 2026-04-03 14:31:51.332417
 +/run git add -A && git commit -m "docs: README bereinigen - veraltete Konstanten, Layout und Funktionsreferenzen korrigieren"
+
+# 2026-04-03 14:32:12.471426
++ Okay, jetzt könnten wir noch die Funktion einbauen, dass wir mit der zweiten Taste durch die Interface scrollen können, wenn wir uns auf der Netzwerk-Applikation befinden. 
+
+# 2026-04-03 14:33:21.810639
++/run make clean && make
+
+# 2026-04-03 14:33:21.812308
++/run make clean && make
+
+# 2026-04-03 14:33:31.629560
++ Es scheint etwas schiefgelaufen zu sein. 
+
+# 2026-04-03 14:33:43.166450
++/run make clean && make
+
+# 2026-04-03 14:33:43.168204
++/run make clean && make
+
+# 2026-04-03 14:33:51.708752
++ Es kommen immer noch Warnungen auf, aber vielleicht sind die auch korrekt. 
+
+# 2026-04-03 14:34:00.828060
++/run make clean && make
+
+# 2026-04-03 14:34:00.828853
++/run make clean && make
+
+# 2026-04-03 14:35:23.656273
++/clear
+
+# 2026-04-03 14:35:27.336844
++Alter, das Ding ist total geil, ich bin sehr zufrieden.  Anscheinend nutzen wir aber die falsche CPU-Temperatur, denn die hat 16 Grad. Gibt es verschiedene Sensoren, die wir auslesen können? Kann ich das irgendwie prüfen und den richtigen Sensor zurückmelden?
+
+# 2026-04-03 14:36:17.416874
++n
+
+# 2026-04-03 14:36:46.154888
++ Wenn ich die Befehle ins Terminal reinsetze, passiert nichts. Ich muss den Befehl ja manuell abbrechen. Kann es sein, dass er nicht komplett ist?
+
+# 2026-04-03 14:37:16.203248
++n
+
+# 2026-04-03 14:37:19.604950
++┌─[✔]─[👨 micha@mj-pc-mj-lnx]─[📁 /home/micha/ai-workbench/coding/G15] main*
++└─❯❯❯ for f in /sys/class/thermal/thermal_zone*/temp; echo "$f: "(cat $f)" ("(cat (dirname $f)/type)")"; end
++/sys/class/thermal/thermal_zone0/temp: 16800 (acpitz)
++/sys/class/thermal/thermal_zone1/temp: 27800 (acpitz)
++/sys/class/thermal/thermal_zone2/temp: 37000 (x86_pkg_temp)
++/sys/class/thermal/thermal_zone3/temp: 33000 (iwlwifi_1)
++
++┌─[✔]─[👨 micha@mj-pc-mj-lnx]─[📁 /home/micha/ai-workbench/coding/G15] main*
++└─❯❯❯ for f in /sys/class/hwmon/hwmon*/temp*_input; echo "$f: "(cat $f)" ("(cat (dirname $f)/name)")"; end
++/sys/class/hwmon/hwmon0/temp1_input: 16800 (acpitz)
++/sys/class/hwmon/hwmon0/temp2_input: 27800 (acpitz)
++/sys/class/hwmon/hwmon1/temp1_input: 33850 (nvme)
++/sys/class/hwmon/hwmon1/temp2_input: 33850 (nvme)
++/sys/class/hwmon/hwmon1/temp3_input: 35850 (nvme)
++/sys/class/hwmon/hwmon2/temp1_input: 33850 (nvme)
++/sys/class/hwmon/hwmon2/temp2_input: 33850 (nvme)
++/sys/class/hwmon/hwmon2/temp3_input: 35850 (nvme)
++/sys/class/hwmon/hwmon3/temp1_input: 33850 (nvme)
++/sys/class/hwmon/hwmon3/temp2_input: 33850 (nvme)
++/sys/class/hwmon/hwmon4/temp1_input: 27000 (gigabyte_wmi)
++/sys/class/hwmon/hwmon4/temp2_input: 34000 (gigabyte_wmi)
++/sys/class/hwmon/hwmon4/temp3_input: 37000 (gigabyte_wmi)
++/sys/class/hwmon/hwmon4/temp4_input: 30000 (gigabyte_wmi)
++/sys/class/hwmon/hwmon4/temp5_input: 35000 (gigabyte_wmi)
++/sys/class/hwmon/hwmon4/temp6_input: 29000 (gigabyte_wmi)
++/sys/class/hwmon/hwmon5/temp1_input: 33750 (spd5118)
++/sys/class/hwmon/hwmon6/temp1_input: 34000 (spd5118)
++/sys/class/hwmon/hwmon7/temp1_input: 35000 (r8169_0_700:00)
++/sys/class/hwmon/hwmon8/temp1_input: 37000 (coretemp)
++/sys/class/hwmon/hwmon8/temp2_input: 32000 (coretemp)
++/sys/class/hwmon/hwmon8/temp6_input: 32000 (coretemp)
++/sys/class/hwmon/hwmon8/temp10_input: 30000 (coretemp)
++/sys/class/hwmon/hwmon8/temp14_input: 33000 (coretemp)
++/sys/class/hwmon/hwmon8/temp18_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp22_input: 32000 (coretemp)
++/sys/class/hwmon/hwmon8/temp26_input: 33000 (coretemp)
++/sys/class/hwmon/hwmon8/temp30_input: 31000 (coretemp)
++/sys/class/hwmon/hwmon8/temp34_input: 33000 (coretemp)
++/sys/class/hwmon/hwmon8/temp35_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp36_input: 35000 (coretemp)
++/sys/class/hwmon/hwmon8/temp37_input: 33000 (coretemp)
++/sys/class/hwmon/hwmon8/temp38_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp39_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp40_input: 35000 (coretemp)
++/sys/class/hwmon/hwmon8/temp41_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp42_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp43_input: 35000 (coretemp)
++/sys/class/hwmon/hwmon8/temp44_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp45_input: 35000 (coretemp)
++/sys/class/hwmon/hwmon8/temp46_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon8/temp47_input: 33000 (coretemp)
++/sys/class/hwmon/hwmon8/temp48_input: 33000 (coretemp)
++/sys/class/hwmon/hwmon8/temp49_input: 34000 (coretemp)
++/sys/class/hwmon/hwmon9/temp1_input: 32000 (iwlwifi_1)
+
+# 2026-04-03 14:53:59.403175
++/run make clean && make
+
+# 2026-04-03 14:53:59.404548
++/run make clean && make
+
+# 2026-04-03 14:53:59.819096
++/run ./g15netspeed
+
+# 2026-04-03 14:53:59.821456
++/run ./g15netspeed
+
+# 2026-04-03 14:55:38.926276
++/commit
