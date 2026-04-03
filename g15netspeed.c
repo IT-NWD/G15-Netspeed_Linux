@@ -42,9 +42,17 @@
 #define DEFAULT_IFACE  "enp7s0"
 #define NUM_PAGES      4
 #define L1_KEY         0x00800000
+#define L2_KEY         0x01000000
+#define MAX_IFACES     32
+#define IFACE_NAME_LEN 32
 
 static volatile int running = 1;
 static int current_page = 0;
+
+/* Interface-Liste */
+static char iface_list[MAX_IFACES][IFACE_NAME_LEN];
+static int iface_count = 0;
+static int iface_index = 0;
 
 /* CPU-Auslastung: vorherige Werte für Differenzberechnung */
 static unsigned long long prev_cpu_total = 0, prev_cpu_idle = 0;
@@ -195,6 +203,45 @@ static int read_swap_usage(void) {
     if (swap_total > 0)
         return (int)(100.0 * (double)(swap_total - swap_free) / (double)swap_total + 0.5);
     return 0;
+}
+
+/* Alle Netzwerk-Interfaces aus /proc/net/dev einlesen */
+static int scan_interfaces(void) {
+    FILE *fp;
+    char line[512];
+    char name[128];
+    int count = 0;
+
+    fp = fopen("/proc/net/dev", "r");
+    if (!fp) return 0;
+
+    /* Erste zwei Zeilen sind Header */
+    if (!fgets(line, sizeof(line), fp)) { fclose(fp); return 0; }
+    if (!fgets(line, sizeof(line), fp)) { fclose(fp); return 0; }
+
+    while (fgets(line, sizeof(line), fp) && count < MAX_IFACES) {
+        if (sscanf(line, " %[^:]:", name) == 1) {
+            /* "lo" (Loopback) überspringen */
+            if (strcmp(name, "lo") == 0)
+                continue;
+            strncpy(iface_list[count], name, IFACE_NAME_LEN - 1);
+            iface_list[count][IFACE_NAME_LEN - 1] = '\0';
+            count++;
+        }
+    }
+    fclose(fp);
+    iface_count = count;
+    return count;
+}
+
+/* Index des Interfaces in der Liste finden (-1 wenn nicht gefunden) */
+static int find_iface_index(const char *iface) {
+    int i;
+    for (i = 0; i < iface_count; i++) {
+        if (strcmp(iface_list[i], iface) == 0)
+            return i;
+    }
+    return -1;
 }
 
 static void signal_handler(int sig) {
@@ -348,6 +395,7 @@ static void push_history(double *history, int *count, int max_size, double value
 
 int main(int argc, char *argv[]) {
     const char *iface = DEFAULT_IFACE;
+    /* iface wird bei Interface-Wechsel auf iface_list[x] umgesetzt */
     int g15_fd;
     g15canvas canvas;
     unsigned long long prev_rx = 0, prev_tx = 0;
@@ -372,6 +420,16 @@ int main(int argc, char *argv[]) {
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+
+    /* Interface-Liste einlesen */
+    scan_interfaces();
+    {
+        int idx = find_iface_index(iface);
+        if (idx >= 0)
+            iface_index = idx;
+        else
+            iface_index = 0;
+    }
 
     memset(dl_history, 0, sizeof(dl_history));
     memset(ul_history, 0, sizeof(ul_history));
@@ -404,6 +462,14 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "g15netspeed gestartet für Interface: '%s'\n", iface);
     fprintf(stderr, "L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)\n");
+    fprintf(stderr, "L2-Taste (2. LCD-Taste): Interface wechseln (auf Netzwerk-Seite)\n");
+    fprintf(stderr, "Verfügbare Interfaces: ");
+    {
+        int i;
+        for (i = 0; i < iface_count; i++)
+            fprintf(stderr, "%s%s", iface_list[i], (i < iface_count - 1) ? ", " : "");
+    }
+    fprintf(stderr, "\n");
     fprintf(stderr, "Drücke Ctrl+C zum Beenden.\n");
 
     while (running) {
@@ -424,6 +490,24 @@ int main(int argc, char *argv[]) {
                     if ((key_state & L1_KEY) && !(prev_key_state & L1_KEY)) {
                         current_page = (current_page + 1) % NUM_PAGES;
                         fprintf(stderr, "Seite gewechselt: %d\n", current_page);
+                    }
+                    if ((key_state & L2_KEY) && !(prev_key_state & L2_KEY)) {
+                        if (current_page == 0 && iface_count > 1) {
+                            /* Nächstes Interface */
+                            iface_index = (iface_index + 1) % iface_count;
+                            iface = iface_list[iface_index];
+                            fprintf(stderr, "Interface gewechselt: %s\n", iface);
+
+                            /* History und Zähler zurücksetzen */
+                            memset(dl_history, 0, sizeof(dl_history));
+                            memset(ul_history, 0, sizeof(ul_history));
+                            dl_count = 0;
+                            ul_count = 0;
+                            first_read = 1;
+
+                            /* Neue Byte-Zähler lesen */
+                            read_net_bytes(iface, &prev_rx, &prev_tx);
+                        }
                     }
                     prev_key_state = key_state;
                 }

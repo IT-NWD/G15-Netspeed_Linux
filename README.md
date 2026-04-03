@@ -39,6 +39,13 @@ g15daemon
 
 Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 
+### Tasten
+
+| Taste | Funktion                                              |
+|-------|-------------------------------------------------------|
+| L1    | Seite umschalten (Netzwerk → CPU → GPU → RAM)        |
+| L2    | Interface wechseln (nur auf der Netzwerk-Seite)       |
+
 ## Architektur & Prozessdiagramm
 
 ```
@@ -219,9 +226,21 @@ Datenfluss-Zusammenfassung:
 | `HISTORY_SIZE`   | 126     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
 | `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
-| `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste unter dem Display)   |
+| `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste, Seitenumschaltung) |
+| `L2_KEY`         | 0x01000000 | Tastaturcode für die L2-Taste (2. LCD-Taste, Interface-Wechsel) |
+| `MAX_IFACES`     | 32         | Maximale Anzahl erkannter Netzwerk-Interfaces                    |
+| `IFACE_NAME_LEN` | 32         | Maximale Länge eines Interface-Namens                            |
 
 ### Funktionen
+
+#### `scan_interfaces(void)`
+- **Zweck:** Liest alle Netzwerk-Interfaces aus `/proc/net/dev` ein (ohne `lo`).
+- **Rückgabe:** Anzahl gefundener Interfaces.
+- **Details:** Füllt das globale Array `iface_list[]` und setzt `iface_count`.
+
+#### `find_iface_index(const char *iface)`
+- **Zweck:** Sucht ein Interface in der Liste und gibt dessen Index zurück.
+- **Rückgabe:** Index (0-basiert) oder `-1` wenn nicht gefunden.
 
 #### `read_cpu_usage(void)`
 - **Zweck:** Liest die CPU-Auslastung aus `/proc/stat` und berechnet den Prozentsatz als Differenz zum vorherigen Aufruf.
