@@ -210,12 +210,12 @@ Datenfluss-Zusammenfassung:
 |------------------|---------|---------------------------------------------------------------------|
 | `LCD_WIDTH`      | 160     | Breite des G15-LCD in Pixeln                                        |
 | `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                         |
-| `GRAPH_WIDTH`    | 131     | Breite der Graphen in Pixeln                                        |
+| `GRAPH_WIDTH`    | 126     | Breite der Graphen in Pixeln                                        |
 | `GRAPH_HEIGHT`   | 16      | Höhe des Download-Graphen in Pixeln                                 |
 | `GRAPH_DL_Y`     | 2       | Y-Position des Download-Graphen (derzeit unbenutzt, siehe Layout)   |
 | `GRAPH_UL_Y`     | 24      | Y-Position des Upload-Graphen (derzeit unbenutzt, siehe Layout)     |
-| `GRAPH_X`        | 28      | X-Position beider Graphen (Platz links für Labels)                  |
-| `HISTORY_SIZE`   | 131     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
+| `GRAPH_X`        | 33      | X-Position beider Graphen (Platz links für Labels)                  |
+| `HISTORY_SIZE`   | 126     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
 | `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
 | `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste unter dem Display)   |
@@ -296,7 +296,7 @@ Datenfluss-Zusammenfassung:
 | UL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=28..41
 | 0.3     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↓)
 +----------------------------------------------------------+ y=43
-         x=28                                        x=159
+         x=33                                        x=159
 ```
 
 - **Zeile 0:** Interface-Name (links) und Gesamtdatenmenge DL/UL (rechts)

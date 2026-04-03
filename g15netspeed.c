@@ -1,7 +1,7 @@
 /*
  * g15netspeed - System-Monitor für Logitech G15
  *
- * 4 Seiten (umschaltbar mit G1-Taste):
+ * 4 Seiten (umschaltbar mit L1-Taste):
  *   Seite 0: Netzwerk (DL/UL Graphen + Gesamtdatenmenge)
  *   Seite 1: CPU (Auslastung + Temperatur)
  *   Seite 2: GPU (Auslastung + Temperatur)
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "g15netspeed gestartet für Interface: '%s'\n", iface);
-    L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)
+    fprintf(stderr, "L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)\n");
     fprintf(stderr, "Drücke Ctrl+C zum Beenden.\n");
 
     while (running) {
