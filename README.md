@@ -210,12 +210,12 @@ Datenfluss-Zusammenfassung:
 |------------------|---------|---------------------------------------------------------------------|
 | `LCD_WIDTH`      | 160     | Breite des G15-LCD in Pixeln                                        |
 | `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                         |
-| `GRAPH_WIDTH`    | 139     | Breite der Graphen in Pixeln                                        |
+| `GRAPH_WIDTH`    | 131     | Breite der Graphen in Pixeln                                        |
 | `GRAPH_HEIGHT`   | 16      | Höhe des Download-Graphen in Pixeln                                 |
 | `GRAPH_DL_Y`     | 2       | Y-Position des Download-Graphen (derzeit unbenutzt, siehe Layout)   |
 | `GRAPH_UL_Y`     | 24      | Y-Position des Upload-Graphen (derzeit unbenutzt, siehe Layout)     |
-| `GRAPH_X`        | 20      | X-Position beider Graphen (Platz links für Labels)                  |
-| `HISTORY_SIZE`   | 139     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
+| `GRAPH_X`        | 28      | X-Position beider Graphen (Platz links für Labels)                  |
+| `HISTORY_SIZE`   | 131     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
 | `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
 
@@ -238,12 +238,19 @@ Datenfluss-Zusammenfassung:
 - **Rückgabe:** `0` bei Erfolg, `-1` bei Fehler (Datei nicht lesbar oder Interface nicht gefunden).
 - **Hinweis:** Die Datei wird bei jedem Aufruf neu geöffnet und geschlossen, da `/proc/net/dev` ein virtuelles Dateisystem ist und die Werte bei jedem Lesen aktualisiert werden.
 
-#### `format_speed(double kbps, char *buf, size_t len)`
-- **Zweck:** Formatiert eine Geschwindigkeit (in KB/s) als lesbaren String.
+#### `speed_unit(double kbps)`
+- **Zweck:** Gibt die passende Einheit als String zurück (`"KB/s"`, `"MB/s"` oder `"GB/s"`).
 - **Logik:**
-  - ≥ 1024 KB/s → `"X.XM"` (Megabyte/s)
-  - ≥ 10 KB/s → `"XXK"` (ohne Dezimalstelle)
-  - < 10 KB/s → `"X.XK"` (mit Dezimalstelle)
+  - ≥ 1048576 KB/s → `"GB/s"`
+  - ≥ 1024 KB/s → `"MB/s"`
+  - < 1024 KB/s → `"KB/s"`
+
+#### `format_speed_value(double kbps, char *buf, size_t len)`
+- **Zweck:** Formatiert den Zahlenwert einer Geschwindigkeit (in KB/s) ohne Einheit, mit einer Nachkommastelle.
+- **Logik:**
+  - ≥ 1048576 KB/s → Wert in GB/s (z.B. `"1.2"`)
+  - ≥ 1024 KB/s → Wert in MB/s (z.B. `"45.3"`)
+  - < 1024 KB/s → Wert in KB/s (z.B. `"3.5"`)
 
 #### `draw_graph(g15canvas *canvas, double *history, int count, int x, int y, int w, int h, double max_val, int inverted)`
 - **Zweck:** Zeichnet einen scrollenden Balkendiagramm-Graphen auf den Canvas.
@@ -282,19 +289,19 @@ Datenfluss-Zusammenfassung:
 +----------------------------------------------------------+ y=0
 | enp7s0                   CPU:45% GPU:30% RAM:62%        |
 +----------------------------------------------------------+
-| DL   |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=10..25
-| 1.2K |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↑)
-|------+------------------------------------------------+--| y=27 (Trennlinie)
-| UL   |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=28..41
-| 0.3K |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↓)
+| DL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=10..25
+| 1.2     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↑)
+|---------+----------------------------------------------+--| y=27 (Trennlinie)
+| UL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=28..41
+| 0.3     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↓)
 +----------------------------------------------------------+ y=43
-         x=20                                        x=159
+         x=28                                        x=159
 ```
 
-- **Zeile 0:** Interface-Name (links) und CPU-, GPU-, RAM-Auslastung (rechts)
-- **y=10–25:** Download-Graph mit Label links (wächst nach oben)
+- **Zeile 0:** Interface-Name (links) und Gesamtdatenmenge DL/UL (rechts)
+- **y=10–25:** Download-Graph mit Label inkl. Einheit links, Zahlenwert darunter (wächst nach oben)
 - **y=27:** Horizontale Trennlinie
-- **y=28–41:** Upload-Graph (invertiert, wächst nach unten von der Trennlinie aus) mit Label links
+- **y=28–41:** Upload-Graph (invertiert, wächst nach unten von der Trennlinie aus) mit Label inkl. Einheit links, Zahlenwert darunter
 
 ## Häufige Anpassungen
 
@@ -320,7 +327,7 @@ double dl_kbps = (double)(curr_rx - prev_rx) / 1024.0 * (1000.0 / UPDATE_MS);
 In `main()` wird `dl_max` / `ul_max` auf mindestens 10 KB/s gesetzt, damit der Graph bei wenig Traffic nicht wild ausschlägt. Diesen Wert bei Bedarf anpassen.
 
 ### Geschwindigkeits-Formatierung
-`format_speed()` anpassen, z.B. für Bits statt Bytes oder andere Schwellwerte.
+`speed_unit()` und `format_speed_value()` anpassen, z.B. für Bits statt Bytes oder andere Schwellwerte.
 
 ## Autostart (systemd)
 
