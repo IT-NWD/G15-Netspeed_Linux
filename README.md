@@ -33,12 +33,21 @@ make clean        # Entfernt Build-Artefakte
 # g15daemon muss laufen:
 g15daemon
 
-# Standard-Interface (enp7s0):
+# Interface der IPv4-Standardroute automatisch erkennen:
 ./g15netspeed
 
 # Anderes Interface angeben:
-./g15netspeed wlan0
+./g15netspeed --interface wlan0
+
+# Aktualisierung alle 500 ms und Messwerte im Terminal ausgeben:
+./g15netspeed --refresh 500 --verbose
+
+# Verfügbare Interfaces anzeigen:
+./g15netspeed --list-interfaces
 ```
+
+Ein einzelnes Positionsargument wie `./g15netspeed wlan0` bleibt aus
+Kompatibilitätsgründen möglich. `--refresh` akzeptiert 50 bis 5000 ms.
 
 Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 
@@ -126,7 +135,7 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 │   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
 │   │   │              Datenverarbeitung                             │  │  │
 │   │   │                                                           │  │  │
-│   │   │  • KB/s berechnen: (diff / 1024) * (1000 / UPDATE_MS)    │  │  │
+│   │   │  • KB/s aus Byte-Differenz und realer Messdauer          │  │  │
 │   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=139)        │  │  │
 │   │   │  • find_max() → dynamische Y-Skalierung                  │  │  │
 │   │   │  • format_speed() → "1.2M", "45K", "3.5K"               │  │  │
@@ -151,7 +160,7 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 │   │   │       └──► Unix Socket ──► g15daemon ──► USB ──► G15 LCD │  │  │
 │   │   └───────────────────────────────────────────────────────────┘  │  │
 │   │                                                                  │  │
-│   │   Hauptschleife: alle 150ms (UPDATE_MS) wiederholen              │  │
+│   │   Hauptschleife: im konfigurierten Intervall wiederholen         │  │
 │   └──────────────────────────────────────────────────────────────────┘  │
 │                                                                         │
 │   Signal-Handler: SIGINT/SIGTERM → running=0 → Cleanup & Exit          │
@@ -199,11 +208,15 @@ Datenfluss-Zusammenfassung:
 
 ### Dateistruktur
 
-| Datei              | Beschreibung                          |
-|--------------------|---------------------------------------|
-| `g15netspeed.c`    | Gesamter Quellcode (Single-File)      |
-| `Makefile`         | Build-System                          |
-| `README.md`        | Diese Dokumentation                   |
+| Datei                      | Beschreibung                                      |
+|----------------------------|---------------------------------------------------|
+| `g15netspeed.c`            | Gesamter Quellcode (Single-File)                  |
+| `g15keytest.c`             | Diagnosewerkzeug für G15-Tastencodes             |
+| `g15netspeed.service`      | systemd-User-Unit                                 |
+| `DPMS-NVIDIA-HINWEIS.md`   | Hintergrund zur deaktivierten NVIDIA-Abfrage     |
+| `tests/test-cli.sh`        | Automatische Tests für CLI und GPU-Freiheit      |
+| `Makefile`                 | Build-System                                      |
+| `README.md`                | Diese Dokumentation                               |
 
 ### Konfigurierbare Konstanten (`#define`)
 
@@ -217,8 +230,9 @@ Datenfluss-Zusammenfassung:
 | `GRAPH_UL_Y`     | 24      | Y-Position des Upload-Graphen (derzeit unbenutzt, siehe Layout)     |
 | `GRAPH_X`        | 20      | X-Position beider Graphen (Platz links für Labels)                  |
 | `HISTORY_SIZE`   | 139     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
-| `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
-| `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
+| `DEFAULT_UPDATE_MS` | 150  | Standard-Aktualisierungsintervall in Millisekunden                  |
+| `MIN_UPDATE_MS`  | 50      | Kleinstes erlaubtes Aktualisierungsintervall                        |
+| `MAX_UPDATE_MS`  | 5000    | Größtes erlaubtes Aktualisierungsintervall                          |
 
 ### Funktionen
 
@@ -259,14 +273,16 @@ Datenfluss-Zusammenfassung:
 
 #### `main()`
 - **Ablauf:**
-  1. Interface aus Kommandozeile oder Default übernehmen
+  1. Optionen auswerten und Interface automatisch erkennen oder übernehmen
   2. Signal-Handler für sauberes Beenden registrieren
   3. Verbindung zum g15daemon herstellen (`new_g15_screen`)
   4. Initiales Lesen der Byte-Zähler
   5. **Hauptschleife:**
      - `nanosleep` für das konfigurierte Intervall
      - Aktuelle Bytes lesen
-     - Differenz berechnen und auf KB/s hochrechnen: `(diff / 1024) * (1000 / UPDATE_MS)`
+     - tatsächliche Messdauer mit `CLOCK_MONOTONIC` bestimmen
+     - Zähler-Reset erkennen und künstliche Peaks verhindern
+     - Differenz anhand der realen Messdauer in KB/s umrechnen
      - History aktualisieren
      - Maximum finden (Minimum: 10 KB/s für sinnvolle Skalierung)
      - LCD-Canvas leeren und neu zeichnen (Labels, Graphen, Trennlinie)
@@ -295,17 +311,26 @@ Datenfluss-Zusammenfassung:
 
 ## Häufige Anpassungen
 
-### Anderes Default-Interface
-`DEFAULT_IFACE` in `g15netspeed.c` ändern. Verfügbare Interfaces anzeigen:
+### Interface festlegen
+
+Standardmäßig wird das Interface der IPv4-Standardroute erkannt. Ein festes
+Interface kann per Option übergeben werden:
+
 ```bash
-cat /proc/net/dev
+g15netspeed --interface wlan0
+g15netspeed --list-interfaces
 ```
 
 ### Aktualisierungsrate ändern
-`UPDATE_MS` anpassen. Die KB/s-Berechnung skaliert automatisch auf 1 Sekunde:
-```c
-double dl_kbps = (double)(curr_rx - prev_rx) / 1024.0 * (1000.0 / UPDATE_MS);
+
+Das Intervall lässt sich ohne Neukompilierung einstellen:
+
+```bash
+g15netspeed --refresh 500
 ```
+
+Die Geschwindigkeitsberechnung verwendet die tatsächlich vergangene monotone
+Zeit und bleibt daher auch bei Scheduler-Verzögerungen korrekt.
 
 ### Graph-Größe / Position ändern
 - `GRAPH_X` – Horizontaler Offset (Platz für Labels)
@@ -341,7 +366,7 @@ systemctl --user start g15netspeed.service
 
 Die Service-Datei anpassen, z.B. für `wlan0`:
 ```ini
-ExecStart=/usr/local/bin/g15netspeed wlan0
+ExecStart=/usr/local/bin/g15netspeed --interface wlan0
 ```
 
 ### Nützliche Befehle
@@ -365,10 +390,9 @@ systemctl --user disable g15netspeed.service
 ## Bekannte Einschränkungen
 
 - **Nur ein Interface:** Es wird nur ein Interface gleichzeitig überwacht.
-- **Kein Autodetect:** Das aktive Interface wird nicht automatisch erkannt.
-- **32-Bit-Overflow:** `/proc/net/dev` kann bei >4 GB Traffic überlaufen (Kernel-abhängig). Die `unsigned long long`-Typen fangen das ab, aber die Differenzberechnung könnte bei einem Wrap-Around kurzzeitig falsche Werte liefern.
+- **IPv6-only:** Die automatische Auswahl bevorzugt die IPv4-Standardroute und fällt anschließend auf ein aktives Interface zurück.
 - **UL-Graph-Höhe hardcoded:** Die Upload-Graph-Höhe (14px) ist direkt im `main()` angegeben statt als Konstante.
 
 ## Lizenz
 
-Frei verwendbar. Keine Lizenz angegeben.
+Veröffentlicht unter der MIT-Lizenz, siehe [`LICENSE`](LICENSE).
