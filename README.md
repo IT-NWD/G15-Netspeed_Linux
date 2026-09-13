@@ -1,7 +1,11 @@
 # g15netspeed
 
 System-Monitor und Netzwerk-Geschwindigkeitsanzeige für das Logitech G15 LCD-Display.
-Zeigt CPU-, GPU- und RAM-Auslastung sowie Upload- und Download-Geschwindigkeit als scrollende Graphen auf dem G15-LCD an.
+Zeigt CPU- und RAM-Auslastung sowie Upload- und Download-Geschwindigkeit als scrollende Graphen auf dem G15-LCD an. Die GPU-Seite und alle `nvidia-smi`-Abfragen sind deaktiviert.
+
+**Wichtig:** Die GPU-Abfrage bleibt absichtlich deaktiviert. Hintergrund und
+Regeln für künftige Änderungen stehen in
+[`DPMS-NVIDIA-HINWEIS.md`](DPMS-NVIDIA-HINWEIS.md).
 
 ## Abhängigkeiten
 
@@ -9,11 +13,10 @@ Zeigt CPU-, GPU- und RAM-Auslastung sowie Upload- und Download-Geschwindigkeit a
 - **libg15** – Low-Level-Bibliothek für G15-Kommunikation
 - **libg15render** – Render-Bibliothek für das G15-LCD (Text, Linien, etc.)
 - **g15daemon_client** – Client-Bibliothek zur Verbindung mit g15daemon
-- **nvidia-utils** – NVIDIA-Treiber mit `nvidia-smi` (für GPU-Auslastung, optional)
 
 Auf Arch Linux:
 ```bash
-pacman -S g15daemon libg15 libg15render nvidia-utils
+pacman -S g15daemon libg15 libg15render
 ```
 
 ## Bauen & Installieren
@@ -39,21 +42,14 @@ g15daemon
 
 Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 
-### Tasten
-
-| Taste | Funktion                                              |
-|-------|-------------------------------------------------------|
-| L1    | Seite umschalten (Netzwerk → CPU → GPU → RAM)         |
-| L2    | Interface wechseln (nur auf der Netzwerk-Seite)       |
-
 ## Architektur & Prozessdiagramm
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                              HARDWARE                                      │
-│                                                                            │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              HARDWARE                                       │
+│                                                                             │
 │   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐       │
-│   │ Logitech G15 │         │   CPU / RAM  │         │  NVIDIA GPU  │       │
+│   │ Logitech G15 │         │   CPU / RAM   │         │   Netzwerk   │       │
 │   │  (USB HID)   │         │              │         │              │       │
 │   └──────┬───────┘         └──────┬───────┘         └──────┬───────┘       │
 │          │ USB                    │                        │               │
@@ -62,29 +58,29 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 ┌──────────┼────────────────────────┼────────────────────────┼───────────────┐
 │          │              LINUX KERNEL                       │               │
 │          ▼                        │                        │               │
-│   ┌──────────────┐                │                        │               │
-│   │  HID Driver  │                ▼                        ▼               │
-│   │  (usbhid)    │        ┌──────────────┐         ┌─────────────┐         │
-│   └──────┬───────┘        │ /proc/stat   │         │ nvidia.ko   │         │
-│          │                │ /proc/meminfo│         │ (Kernel Mod)│         │
-│          │                │ /proc/net/dev│         └──────┬──────┘         │
-│          │                └──────┬───────┘                │                │
-│          │ /dev/hidrawX          │ procfs                 │                │
-└──────────┼───────────────────────┼────────────────────────┼────────────────┘
+│   ┌──────────────┐               │                        │               │
+│   │  HID Driver  │               ▼                        ▼               │
+│   │  (usbhid)    │        ┌─────────────┐         ┌─────────────┐        │
+│   └──────┬───────┘        │ /proc/stat  │         │/proc/net/dev│        │
+│          │                │ /proc/meminfo│         │ RX/TX-Zähler│        │
+│          │                │ /proc/net/dev│         └──────┬──────┘        │
+│          │                └──────┬──────┘                │               │
+│          │ /dev/hidrawX          │ procfs                │               │
+└──────────┼───────────────────────┼────────────────────────┼───────────────┘
            │                       │                        │
-┌──────────┼───────────────────────┼────────────────────────┼────────────────┐
-│          │             USERSPACE DAEMONS / TOOLS          │                │
-│          ▼                       │                        ▼                │
-│   ┌──────────────┐               │                 ┌─────────────┐         │
-│   │  g15daemon   │               │                 │ nvidia-smi  │         │
-│   │  (Daemon)    │               │                 │ (CLI Tool)  │         │
-│   │              │               │                 └──────┬──────┘         │
-│   │ • LCD-Mux    │               │                        │ popen()        │
-│   │ • Client-Mgmt│               │                        │                │
-│   └──────┬───────┘               │                        │                │
-│          │ Unix Socket           │                        │                │
-│          │ (localhost:15550)     │                        │                │
-└──────────┼───────────────────────┼────────────────────────┼────────────────┘
+┌──────────┼───────────────────────┼────────────────────────┼───────────────┐
+│          │             USERSPACE DAEMONS / TOOLS          │               │
+│          ▼                       │                        ▼               │
+│   ┌──────────────┐               │                 ┌─────────────┐       │
+│   │  g15daemon   │               │                 │ keine externe│       │
+│   │  (Daemon)    │               │                 │ GPU-Abfrage  │       │
+│   │              │               │                 └──────┬──────┘       │
+│   │ • LCD-Mux    │               │                        │             │
+│   │ • Client-Mgmt│               │                        │              │
+│   └──────┬───────┘               │                        │              │
+│          │ Unix Socket           │                        │              │
+│          │ (localhost:15550)      │                        │              │
+└──────────┼───────────────────────┼────────────────────────┼──────────────┘
            │                       │                        │
 ┌──────────┼───────────────────────┼────────────────────────┼──────────────┐
 │          │            SHARED LIBRARIES                    │              │
@@ -113,92 +109,89 @@ Beenden mit `Ctrl+C`. Das Display wird beim Beenden automatisch geleert.
 │   │   ┌──────────────────────────┼────────────────────────┼────────┐  │  │
 │   │   │              Datenquellen lesen                   │        │  │  │
 │   │   │                          │                        │        │  │  │
-│   │   │  read_net_bytes() ◄──────┘ fopen("/proc/net/dev") │        │  │  │
+│   │   │  read_net_bytes() ◄──────┘ fopen("/proc/net/dev")│        │  │  │
 │   │   │       │                                           │        │  │  │
 │   │   │       ├── rx_bytes (Download)                     │        │  │  │
 │   │   │       └── tx_bytes (Upload)                       │        │  │  │
 │   │   │                                                   │        │  │  │
-│   │   │  read_cpu_usage() ◄──── fopen("/proc/stat")       │        │  │  │
+│   │   │  read_cpu_usage() ◄──── fopen("/proc/stat")      │        │  │  │
 │   │   │       └── CPU % (Differenz-Methode)               │        │  │  │
 │   │   │                                                   │        │  │  │
-│   │   │  read_ram_usage() ◄──── fopen("/proc/meminfo")    │        │  │  │
+│   │   │  read_ram_usage() ◄──── fopen("/proc/meminfo")   │        │  │  │
 │   │   │       └── RAM %                                   │        │  │  │
 │   │   │                                                   │        │  │  │
-│   │   │  read_gpu_usage() ◄───────────────────────────────┘        │  │  │
-│   │   │       └── GPU % (popen("nvidia-smi"), 1s Cache)            │  │  │
-│   │   └────────────────────────────────────────────────────────────┘  │  │
-│   │                          │                                        │  │
-│   │   ┌──────────────────────▼─────────────────────────────────────┐  │  │
+│   │   │  Keine GPU-Abfrage (absichtlich deaktiviert)      │        │  │  │
+│   │   └───────────────────────────────────────────────────────────┘  │  │
+│   │                          │                                       │  │
+│   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
 │   │   │              Datenverarbeitung                             │  │  │
-│   │   │                                                            │  │  │
-│   │   │  • KB/s berechnen: (diff / 1024) * (1000 / UPDATE_MS)      │  │  │
-│   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=126)          │  │  │
-│   │   │  • find_max() → dynamische Y-Skalierung                    │  │  │
-│   │   │  • speed_unit() → "KB/s", "MB/s", "GB/s"                   │  │  │
-│   │   │  • format_speed_value() → "1.2", "45.3", "3.5"             │  │  │
-│   │   └──────────────────────┬─────────────────────────────────────┘  │  │
-│   │                          │                                        │  │
-│   │   ┌──────────────────────▼────────────────────────────────────┐   │  │
-│   │   │              Rendering (libg15render)                     │   │  │
-│   │   │                                                           │   │  │
-│   │   │  g15r_clearScreen()                                       │   │  │
-│   │   │  g15r_renderString() → Interface, CPU%, GPU%, RAM%        │   │  │
-│   │   │  g15r_renderString() → "DL", "UL", Speed-Labels           │   │  │
-│   │   │  draw_graph()        → DL-Graph (y=10, wächst ↑)          │   │  │
-│   │   │  g15r_drawLine()     → Trennlinie (y=27)                  │   │  │
-│   │   │  draw_graph()        → UL-Graph (y=28, invertiert ↓)      │   │  │
-│   │   └──────────────────────┬────────────────────────────────────┘   │  │
-│   │                          │                                        │  │
-│   │   ┌──────────────────────▼────────────────────────────────────┐   │  │
-│   │   │              Ausgabe (g15daemon_client)                   │   │  │
-│   │   │                                                           │   │  │
-│   │   │  g15_send(fd, canvas.buffer, G15_BUFFER_LEN)              │   │  │
-│   │   │       │                                                   │   │  │
-│   │   │       └──► Unix Socket ──► g15daemon ──► USB ──► G15 LCD  │   │  │
-│   │   └───────────────────────────────────────────────────────────┘   │  │
-│   │                                                                   │  │
-│   │   Hauptschleife: alle 150ms (UPDATE_MS) wiederholen               │  │
-│   └───────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│   Signal-Handler: SIGINT/SIGTERM → running=0 → Cleanup & Exit            │
-└──────────────────────────────────────────────────────────────────────────┘
+│   │   │                                                           │  │  │
+│   │   │  • KB/s berechnen: (diff / 1024) * (1000 / UPDATE_MS)    │  │  │
+│   │   │  • push_history() → Ringpuffer (HISTORY_SIZE=139)        │  │  │
+│   │   │  • find_max() → dynamische Y-Skalierung                  │  │  │
+│   │   │  • format_speed() → "1.2M", "45K", "3.5K"               │  │  │
+│   │   └──────────────────────┬────────────────────────────────────┘  │  │
+│   │                          │                                       │  │
+│   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
+│   │   │              Rendering (libg15render)                     │  │  │
+│   │   │                                                           │  │  │
+│   │   │  g15r_clearScreen()                                       │  │  │
+│   │   │  g15r_renderString() → Interface, CPU%, RAM%            │  │  │
+│   │   │  g15r_renderString() → "DL", "UL", Speed-Labels         │  │  │
+│   │   │  draw_graph()        → DL-Graph (y=10, wächst ↑)        │  │  │
+│   │   │  g15r_drawLine()     → Trennlinie (y=27)                │  │  │
+│   │   │  draw_graph()        → UL-Graph (y=28, invertiert ↓)    │  │  │
+│   │   └──────────────────────┬────────────────────────────────────┘  │  │
+│   │                          │                                       │  │
+│   │   ┌──────────────────────▼────────────────────────────────────┐  │  │
+│   │   │              Ausgabe (g15daemon_client)                   │  │  │
+│   │   │                                                           │  │  │
+│   │   │  g15_send(fd, canvas.buffer, G15_BUFFER_LEN)             │  │  │
+│   │   │       │                                                   │  │  │
+│   │   │       └──► Unix Socket ──► g15daemon ──► USB ──► G15 LCD │  │  │
+│   │   └───────────────────────────────────────────────────────────┘  │  │
+│   │                                                                  │  │
+│   │   Hauptschleife: alle 150ms (UPDATE_MS) wiederholen              │  │
+│   └──────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│   Signal-Handler: SIGINT/SIGTERM → running=0 → Cleanup & Exit          │
+└─────────────────────────────────────────────────────────────────────────┘
 
 
 Datenfluss-Zusammenfassung:
 
   /proc/stat ─────────► read_cpu_usage() ──┐
   /proc/meminfo ──────► read_ram_usage() ──┤
-  nvidia-smi ─────────► read_gpu_usage() ──┤
   /proc/net/dev ──────► read_net_bytes() ──┤
                                            ▼
                                     ┌─────────────┐
-                                    │  Berechnung │
-                                    │  & History  │
+                                    │  Berechnung  │
+                                    │  & History   │
                                     └──────┬──────┘
                                            ▼
                                     ┌─────────────┐
-                                    │ libg15render│
-                                    │  (Canvas)   │
+                                    │ libg15render │
+                                    │  (Canvas)    │
                                     └──────┬──────┘
                                            ▼
                                     ┌──────────────────┐
-                                    │ g15daemon_client │
-                                    │  g15_send()      │
+                                    │ g15daemon_client  │
+                                    │  g15_send()       │
                                     └──────┬───────────┘
                                            ▼
                                     ┌─────────────┐
-                                    │  g15daemon  │
-                                    │  (Socket)   │
+                                    │  g15daemon   │
+                                    │  (Socket)    │
                                     └──────┬──────┘
                                            ▼
                                     ┌─────────────┐
-                                    │   libg15    │
-                                    │  (USB HID)  │
+                                    │   libg15     │
+                                    │  (USB HID)   │
                                     └──────┬──────┘
                                            ▼
                                     ┌─────────────┐
-                                    │  G15 LCD    │
-                                    │  (160×43px) │
+                                    │  G15 LCD     │
+                                    │  (160×43px)  │
                                     └─────────────┘
 ```
 
@@ -206,41 +199,28 @@ Datenfluss-Zusammenfassung:
 
 ### Dateistruktur
 
-| Datei                  | Beschreibung                                      |
-|------------------------|---------------------------------------------------|
-| `g15netspeed.c`        | Gesamter Quellcode (Single-File)                  |
-| `g15keytest.c`         | Debug-Tool zum Auslesen der G15-Tastencodes       |
-| `Makefile`             | Build-System                                      |
-| `g15netspeed.service`  | systemd-User-Unit für Autostart                   |
-| `README.md`            | Diese Dokumentation                               |
+| Datei              | Beschreibung                          |
+|--------------------|---------------------------------------|
+| `g15netspeed.c`    | Gesamter Quellcode (Single-File)      |
+| `Makefile`         | Build-System                          |
+| `README.md`        | Diese Dokumentation                   |
 
 ### Konfigurierbare Konstanten (`#define`)
 
 | Konstante        | Wert    | Beschreibung                                                        |
 |------------------|---------|---------------------------------------------------------------------|
 | `LCD_WIDTH`      | 160     | Breite des G15-LCD in Pixeln                                        |
-| `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                          |
-| `GRAPH_WIDTH`    | 124     | Breite der Graphen in Pixeln                                        |
+| `LCD_HEIGHT`     | 43      | Höhe des G15-LCD in Pixeln                                         |
+| `GRAPH_WIDTH`    | 139     | Breite der Graphen in Pixeln                                        |
 | `GRAPH_HEIGHT`   | 16      | Höhe des Download-Graphen in Pixeln                                 |
-| `GRAPH_X`        | 35      | X-Position beider Graphen (Platz links für Labels)                  |
-| `HISTORY_SIZE`   | 126     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                    |
+| `GRAPH_DL_Y`     | 2       | Y-Position des Download-Graphen (derzeit unbenutzt, siehe Layout)   |
+| `GRAPH_UL_Y`     | 24      | Y-Position des Upload-Graphen (derzeit unbenutzt, siehe Layout)     |
+| `GRAPH_X`        | 20      | X-Position beider Graphen (Platz links für Labels)                  |
+| `HISTORY_SIZE`   | 139     | Anzahl gespeicherter Messwerte (= `GRAPH_WIDTH`)                   |
 | `UPDATE_MS`      | 150     | Aktualisierungsintervall in Millisekunden                           |
 | `DEFAULT_IFACE`  | enp7s0  | Standard-Netzwerk-Interface                                         |
-| `L1_KEY`         | 0x00800000 | Tastaturcode für die L1-Taste (1. LCD-Taste, Seitenumschaltung)  |
-| `L2_KEY`         | 0x01000000 | Tastaturcode für die L2-Taste (2. LCD-Taste, Interface-Wechsel)  |
-| `MAX_IFACES`     | 32         | Maximale Anzahl erkannter Netzwerk-Interfaces                    |
-| `IFACE_NAME_LEN` | 32         | Maximale Länge eines Interface-Namens                            |
 
 ### Funktionen
-
-#### `scan_interfaces(void)`
-- **Zweck:** Liest alle Netzwerk-Interfaces aus `/proc/net/dev` ein (ohne `lo`).
-- **Rückgabe:** Anzahl gefundener Interfaces.
-- **Details:** Füllt das globale Array `iface_list[]` und setzt `iface_count`.
-
-#### `find_iface_index(const char *iface)`
-- **Zweck:** Sucht ein Interface in der Liste und gibt dessen Index zurück.
-- **Rückgabe:** Index (0-basiert) oder `-1` wenn nicht gefunden.
 
 #### `read_cpu_usage(void)`
 - **Zweck:** Liest die CPU-Auslastung aus `/proc/stat` und berechnet den Prozentsatz als Differenz zum vorherigen Aufruf.
@@ -250,28 +230,17 @@ Datenfluss-Zusammenfassung:
 - **Zweck:** Liest `MemTotal` und `MemAvailable` aus `/proc/meminfo` und berechnet die RAM-Auslastung.
 - **Rückgabe:** RAM-Auslastung in Prozent (0–100).
 
-#### `read_gpu_usage(void)`
-- **Zweck:** Liest die GPU-Auslastung über `nvidia-smi` via `popen()`. Der Wert wird gecacht und maximal 1x pro Sekunde neu abgefragt.
-- **Rückgabe:** GPU-Auslastung in Prozent (0–100), oder `-1` wenn `nvidia-smi` nicht verfügbar.
-
 #### `read_net_bytes(const char *iface, unsigned long long *rx, unsigned long long *tx)`
 - **Zweck:** Liest die empfangenen (`rx`) und gesendeten (`tx`) Bytes für ein Interface aus `/proc/net/dev`.
 - **Rückgabe:** `0` bei Erfolg, `-1` bei Fehler (Datei nicht lesbar oder Interface nicht gefunden).
 - **Hinweis:** Die Datei wird bei jedem Aufruf neu geöffnet und geschlossen, da `/proc/net/dev` ein virtuelles Dateisystem ist und die Werte bei jedem Lesen aktualisiert werden.
 
-#### `speed_unit(double kbps)`
-- **Zweck:** Gibt die passende Einheit als String zurück (`"KB/s"`, `"MB/s"` oder `"GB/s"`).
+#### `format_speed(double kbps, char *buf, size_t len)`
+- **Zweck:** Formatiert eine Geschwindigkeit (in KB/s) als lesbaren String.
 - **Logik:**
-  - ≥ 1048576 KB/s → `"GB/s"`
-  - ≥ 1024 KB/s → `"MB/s"`
-  - < 1024 KB/s → `"KB/s"`
-
-#### `format_speed_value(double kbps, char *buf, size_t len)`
-- **Zweck:** Formatiert den Zahlenwert einer Geschwindigkeit (in KB/s) ohne Einheit, mit einer Nachkommastelle.
-- **Logik:**
-  - ≥ 1048576 KB/s → Wert in GB/s (z.B. `"1.2"`)
-  - ≥ 1024 KB/s → Wert in MB/s (z.B. `"45.3"`)
-  - < 1024 KB/s → Wert in KB/s (z.B. `"3.5"`)
+  - ≥ 1024 KB/s → `"X.XM"` (Megabyte/s)
+  - ≥ 10 KB/s → `"XXK"` (ohne Dezimalstelle)
+  - < 10 KB/s → `"X.XK"` (mit Dezimalstelle)
 
 #### `draw_graph(g15canvas *canvas, double *history, int count, int x, int y, int w, int h, double max_val, int inverted)`
 - **Zweck:** Zeichnet einen scrollenden Balkendiagramm-Graphen auf den Canvas.
@@ -308,21 +277,21 @@ Datenfluss-Zusammenfassung:
 
 ```
 +----------------------------------------------------------+ y=0
-| enp7s0                        D:1.23GB U:256.00MB        |
+| enp7s0                         CPU:45% RAM:62%          |
 +----------------------------------------------------------+
-| DL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=10..25
-| 1.2     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↑)
-|---------+----------------------------------------------+--| y=27 (Trennlinie)
-| UL(KB/s)|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=28..41
-| 0.3     |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↓)
+| DL   |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=10..25
+| 1.2K |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↑)
+|------+------------------------------------------------+--| y=27 (Trennlinie)
+| UL   |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | y=28..41
+| 0.3K |▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓| | (wächst ↓)
 +----------------------------------------------------------+ y=43
-         x=33                                        x=159
+         x=20                                        x=159
 ```
 
-- **Zeile 0:** Interface-Name (links) und Gesamtdatenmenge D:/U: (rechts)
-- **y=10–25:** Download-Graph mit Label inkl. Einheit links, Zahlenwert darunter (wächst nach oben)
+- **Zeile 0:** Interface-Name (links) und CPU-/RAM-Auslastung (rechts)
+- **y=10–25:** Download-Graph mit Label links (wächst nach oben)
 - **y=27:** Horizontale Trennlinie
-- **y=28–41:** Upload-Graph (invertiert, wächst nach unten von der Trennlinie aus) mit Label inkl. Einheit links, Zahlenwert darunter
+- **y=28–41:** Upload-Graph (invertiert, wächst nach unten von der Trennlinie aus) mit Label links
 
 ## Häufige Anpassungen
 
@@ -348,7 +317,7 @@ double dl_kbps = (double)(curr_rx - prev_rx) / 1024.0 * (1000.0 / UPDATE_MS);
 In `main()` wird `dl_max` / `ul_max` auf mindestens 10 KB/s gesetzt, damit der Graph bei wenig Traffic nicht wild ausschlägt. Diesen Wert bei Bedarf anpassen.
 
 ### Geschwindigkeits-Formatierung
-`speed_unit()` und `format_speed_value()` anpassen, z.B. für Bits statt Bytes oder andere Schwellwerte.
+`format_speed()` anpassen, z.B. für Bits statt Bytes oder andere Schwellwerte.
 
 ## Autostart (systemd)
 
@@ -402,4 +371,4 @@ systemctl --user disable g15netspeed.service
 
 ## Lizenz
 
-Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details.
+Frei verwendbar. Keine Lizenz angegeben.
