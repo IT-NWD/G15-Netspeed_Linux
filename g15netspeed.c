@@ -1,12 +1,7 @@
 /*
- * g15netspeed - System-Monitor für Logitech G15
+ * g15netspeed - Netzwerk-Geschwindigkeitsanzeige für Logitech G15
  *
- * 4 Seiten (umschaltbar mit L1-Taste):
- *   Seite 0: Netzwerk (DL/UL Graphen + Gesamtdatenmenge)
- *   Seite 1: CPU (Auslastung + Temperatur)
- *   Seite 2: GPU (Auslastung + Temperatur)
- *   Seite 3: RAM (Auslastung + Swap)
- *
+ * Zeigt Upload/Download als scrollende Graphen auf dem G15-LCD an.
  * Benötigt: g15daemon, libg15, libg15render
  *
  * Kompilieren:
@@ -24,36 +19,22 @@
 #include <signal.h>
 #include <math.h>
 #include <time.h>
-#include <fcntl.h>
-#include <dirent.h>
-#include <errno.h>
-#include <sys/select.h>
-#include <sys/socket.h>
 #include <libg15.h>
 #include <libg15render.h>
 #include <g15daemon_client.h>
 
 #define LCD_WIDTH      160
 #define LCD_HEIGHT     43
-#define GRAPH_WIDTH    124
+#define GRAPH_WIDTH    139
 #define GRAPH_HEIGHT   16
-#define GRAPH_X        35
+#define GRAPH_DL_Y     2
+#define GRAPH_UL_Y     24
+#define GRAPH_X        20
 #define HISTORY_SIZE   GRAPH_WIDTH
 #define UPDATE_MS      150
 #define DEFAULT_IFACE  "enp7s0"
-#define NUM_PAGES      4
-#define L1_KEY         0x00800000
-#define L2_KEY         0x01000000
-#define MAX_IFACES     32
-#define IFACE_NAME_LEN 32
 
 static volatile int running = 1;
-static int current_page = 0;
-
-/* Interface-Liste */
-static char iface_list[MAX_IFACES][IFACE_NAME_LEN];
-static int iface_count = 0;
-static int iface_index = 0;
 
 /* CPU-Auslastung: vorherige Werte für Differenzberechnung */
 static unsigned long long prev_cpu_total = 0, prev_cpu_idle = 0;
@@ -110,220 +91,6 @@ static int read_ram_usage(void) {
     return 0;
 }
 
-/* GPU-Auslastung über nvidia-smi lesen (gecacht, max. 1x pro Sekunde) */
-static int read_gpu_usage(void) {
-    static int cached_usage = -1;
-    static struct timespec last_read = {0, 0};
-    struct timespec now;
-    FILE *fp;
-    int usage;
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    /* Nur alle 1 Sekunde neu abfragen */
-    if (cached_usage >= 0 &&
-        (now.tv_sec - last_read.tv_sec) < 1) {
-        return cached_usage;
-    }
-
-    fp = popen("nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null", "r");
-    if (fp) {
-        if (fscanf(fp, "%d", &usage) == 1)
-            cached_usage = usage;
-        pclose(fp);
-    }
-
-    last_read = now;
-    return cached_usage;
-}
-
-/* CPU-Temperatur-Sensor in /sys/class/hwmon/ finden (coretemp oder k10temp) */
-static int find_cpu_temp_hwmon(char *path, size_t path_len) {
-    DIR *dir;
-    struct dirent *entry;
-    char name_path[256];
-    char name[64];
-    FILE *fp;
-
-    dir = opendir("/sys/class/hwmon");
-    if (!dir) return 0;
-
-    while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.') continue;
-
-        snprintf(name_path, sizeof(name_path), "/sys/class/hwmon/%s/name", entry->d_name);
-        fp = fopen(name_path, "r");
-        if (!fp) continue;
-
-        name[0] = '\0';
-        if (fscanf(fp, "%63s", name) != 1) name[0] = '\0';
-        fclose(fp);
-
-        /* coretemp (Intel) oder k10temp (AMD) = CPU-Package-Temperatur */
-        if (strcmp(name, "coretemp") == 0 || strcmp(name, "k10temp") == 0) {
-            snprintf(path, path_len, "/sys/class/hwmon/%s/temp1_input", entry->d_name);
-            closedir(dir);
-            return 1;
-        }
-    }
-    closedir(dir);
-    return 0;
-}
-
-/* CPU-Temperatur-Sensor in /sys/class/thermal/ finden (x86_pkg_temp) */
-static int find_cpu_temp_thermal(char *path, size_t path_len) {
-    DIR *dir;
-    struct dirent *entry;
-    char type_path[256];
-    char type[64];
-    FILE *fp;
-
-    dir = opendir("/sys/class/thermal");
-    if (!dir) return 0;
-
-    while ((entry = readdir(dir)) != NULL) {
-        if (strncmp(entry->d_name, "thermal_zone", 12) != 0) continue;
-
-        snprintf(type_path, sizeof(type_path), "/sys/class/thermal/%s/type", entry->d_name);
-        fp = fopen(type_path, "r");
-        if (!fp) continue;
-
-        type[0] = '\0';
-        if (fscanf(fp, "%63s", type) != 1) type[0] = '\0';
-        fclose(fp);
-
-        if (strcmp(type, "x86_pkg_temp") == 0) {
-            snprintf(path, path_len, "/sys/class/thermal/%s/temp", entry->d_name);
-            closedir(dir);
-            return 1;
-        }
-    }
-    closedir(dir);
-    return 0;
-}
-
-/* CPU-Temperatur aus /sys lesen (Rückgabe: Grad Celsius, 0 bei Fehler) */
-static int read_cpu_temp(void) {
-    static int cached_temp = 0;
-    static struct timespec last_read = {0, 0};
-    static char sensor_path[256] = "";
-    static int sensor_searched = 0;
-    struct timespec now;
-    FILE *fp;
-    int temp;
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (cached_temp > 0 && (now.tv_sec - last_read.tv_sec) < 1)
-        return cached_temp;
-
-    /* Sensor-Pfad einmalig suchen */
-    if (!sensor_searched) {
-        sensor_searched = 1;
-        if (find_cpu_temp_hwmon(sensor_path, sizeof(sensor_path))) {
-            fprintf(stderr, "CPU-Temp-Sensor gefunden: %s\n", sensor_path);
-        } else if (find_cpu_temp_thermal(sensor_path, sizeof(sensor_path))) {
-            fprintf(stderr, "CPU-Temp-Sensor gefunden: %s\n", sensor_path);
-        } else {
-            /* Letzter Fallback */
-            snprintf(sensor_path, sizeof(sensor_path),
-                     "/sys/class/thermal/thermal_zone0/temp");
-            fprintf(stderr, "CPU-Temp-Sensor: Fallback auf %s\n", sensor_path);
-        }
-    }
-
-    fp = fopen(sensor_path, "r");
-    if (fp) {
-        if (fscanf(fp, "%d", &temp) == 1)
-            cached_temp = temp / 1000;
-        fclose(fp);
-    }
-
-    last_read = now;
-    return cached_temp;
-}
-
-/* GPU-Temperatur über nvidia-smi lesen (gecacht, max. 1x pro Sekunde) */
-static int read_gpu_temp(void) {
-    static int cached_temp = 0;
-    static struct timespec last_read = {0, 0};
-    struct timespec now;
-    FILE *fp;
-    int temp;
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (cached_temp > 0 && (now.tv_sec - last_read.tv_sec) < 1)
-        return cached_temp;
-
-    fp = popen("nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null", "r");
-    if (fp) {
-        if (fscanf(fp, "%d", &temp) == 1)
-            cached_temp = temp;
-        pclose(fp);
-    }
-
-    last_read = now;
-    return cached_temp;
-}
-
-/* Swap-Auslastung aus /proc/meminfo lesen (Rückgabe: 0-100%) */
-static int read_swap_usage(void) {
-    FILE *fp;
-    char line[256];
-    unsigned long long swap_total = 0, swap_free = 0;
-    int found = 0;
-
-    fp = fopen("/proc/meminfo", "r");
-    if (!fp) return 0;
-
-    while (fgets(line, sizeof(line), fp) && found < 2) {
-        if (sscanf(line, "SwapTotal: %llu kB", &swap_total) == 1) found++;
-        if (sscanf(line, "SwapFree: %llu kB", &swap_free) == 1) found++;
-    }
-    fclose(fp);
-
-    if (swap_total > 0)
-        return (int)(100.0 * (double)(swap_total - swap_free) / (double)swap_total + 0.5);
-    return 0;
-}
-
-/* Alle Netzwerk-Interfaces aus /proc/net/dev einlesen */
-static int scan_interfaces(void) {
-    FILE *fp;
-    char line[512];
-    char name[IFACE_NAME_LEN];
-    int count = 0;
-
-    fp = fopen("/proc/net/dev", "r");
-    if (!fp) return 0;
-
-    /* Erste zwei Zeilen sind Header */
-    if (!fgets(line, sizeof(line), fp)) { fclose(fp); return 0; }
-    if (!fgets(line, sizeof(line), fp)) { fclose(fp); return 0; }
-
-    while (fgets(line, sizeof(line), fp) && count < MAX_IFACES) {
-        if (sscanf(line, " %[^:]:", name) == 1) {
-            /* "lo" (Loopback) überspringen */
-            if (strcmp(name, "lo") == 0)
-                continue;
-            snprintf(iface_list[count], IFACE_NAME_LEN, "%s", name);
-            count++;
-        }
-    }
-    fclose(fp);
-    iface_count = count;
-    return count;
-}
-
-/* Index des Interfaces in der Liste finden (-1 wenn nicht gefunden) */
-static int find_iface_index(const char *iface) {
-    int i;
-    for (i = 0; i < iface_count; i++) {
-        if (strcmp(iface_list[i], iface) == 0)
-            return i;
-    }
-    return -1;
-}
-
 static void signal_handler(int sig) {
     (void)sig;
     running = 0;
@@ -367,37 +134,14 @@ static int read_net_bytes(const char *iface, unsigned long long *rx, unsigned lo
     return found ? 0 : -1;
 }
 
-/* Einheit für Geschwindigkeit bestimmen */
-static const char *speed_unit(double kbps) {
-    if (kbps >= 1048576.0)
-        return "GB/s";
-    else if (kbps >= 1024.0)
-        return "MB/s";
+/* Formatierte Geschwindigkeit als String */
+static void format_speed(double kbps, char *buf, size_t len) {
+    if (kbps >= 1024.0)
+        snprintf(buf, len, "%.1fM", kbps / 1024.0);
+    else if (kbps >= 10.0)
+        snprintf(buf, len, "%.0fK", kbps);
     else
-        return "KB/s";
-}
-
-/* Zahlenwert der Geschwindigkeit (in passender Einheit, 1 Nachkommastelle) */
-static void format_speed_value(double kbps, char *buf, size_t len) {
-    if (kbps >= 1048576.0)
-        snprintf(buf, len, "%.1f", kbps / 1048576.0);
-    else if (kbps >= 1024.0)
-        snprintf(buf, len, "%.1f", kbps / 1024.0);
-    else
-        snprintf(buf, len, "%.1f", kbps);
-}
-
-/* Formatierte Datenmenge als String (KB, MB, GB, TB) – immer 2 Nachkommastellen */
-static void format_bytes(unsigned long long bytes, char *buf, size_t len) {
-    double val = (double)bytes;
-    if (val >= 1099511627776.0)
-        snprintf(buf, len, "%.2fTB", val / 1099511627776.0);
-    else if (val >= 1073741824.0)
-        snprintf(buf, len, "%.2fGB", val / 1073741824.0);
-    else if (val >= 1048576.0)
-        snprintf(buf, len, "%.2fMB", val / 1048576.0);
-    else
-        snprintf(buf, len, "%.2fKB", val / 1024.0);
+        snprintf(buf, len, "%.1fK", kbps);
 }
 
 /* Graph zeichnen (rechtsbündig, gefüllte Fläche, nach oben) */
@@ -475,25 +219,16 @@ static void push_history(double *history, int *count, int max_size, double value
 
 int main(int argc, char *argv[]) {
     const char *iface = DEFAULT_IFACE;
-    /* iface wird bei Interface-Wechsel auf iface_list[x] umgesetzt */
     int g15_fd;
     g15canvas canvas;
     unsigned long long prev_rx = 0, prev_tx = 0;
     unsigned long long curr_rx, curr_tx;
-    double dl_history[HISTORY_SIZE], ul_history[HISTORY_SIZE];
+    double dl_history[HISTORY_SIZE];
+    double ul_history[HISTORY_SIZE];
     int dl_count = 0, ul_count = 0;
-    double cpu_history[HISTORY_SIZE], cpu_temp_history[HISTORY_SIZE];
-    int cpu_count = 0, cpu_temp_count = 0;
-    double gpu_history[HISTORY_SIZE], gpu_temp_history[HISTORY_SIZE];
-    int gpu_count = 0, gpu_temp_count = 0;
-    double ram_history[HISTORY_SIZE], swap_history[HISTORY_SIZE];
-    int ram_count = 0, swap_count = 0;
     int first_read = 1;
-    char dl_str[32], ul_str[32];
-    char dl_total_str[32], ul_total_str[32];
+    char dl_str[32], ul_str[32], max_dl_str[32], max_ul_str[32];
     char title[128];
-    unsigned int key_state = 0;
-    unsigned int prev_key_state = 0;
 
     if (argc > 1)
         iface = argv[1];
@@ -501,24 +236,8 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    /* Interface-Liste einlesen */
-    scan_interfaces();
-    {
-        int idx = find_iface_index(iface);
-        if (idx >= 0)
-            iface_index = idx;
-        else
-            iface_index = 0;
-    }
-
     memset(dl_history, 0, sizeof(dl_history));
     memset(ul_history, 0, sizeof(ul_history));
-    memset(cpu_history, 0, sizeof(cpu_history));
-    memset(cpu_temp_history, 0, sizeof(cpu_temp_history));
-    memset(gpu_history, 0, sizeof(gpu_history));
-    memset(gpu_temp_history, 0, sizeof(gpu_temp_history));
-    memset(ram_history, 0, sizeof(ram_history));
-    memset(swap_history, 0, sizeof(swap_history));
 
     /* Zum g15daemon verbinden */
     g15_fd = new_g15_screen(G15_G15RBUF);
@@ -530,27 +249,15 @@ int main(int argc, char *argv[]) {
 
     g15r_initCanvas(&canvas);
 
-
     /* Initiales Lesen der Bytes */
-    fprintf(stderr, "Verbinde mit g15daemon... OK (fd=%d)\n", g15_fd);
-
     if (read_net_bytes(iface, &prev_rx, &prev_tx) != 0) {
         fprintf(stderr, "Fehler: Interface '%s' nicht gefunden in /proc/net/dev\n", iface);
         g15_close_screen(g15_fd);
         return 1;
     }
 
-    fprintf(stderr, "g15netspeed gestartet für Interface: '%s'\n", iface);
-    fprintf(stderr, "L1-Taste (1. LCD-Taste): Seiten umschalten (Netz/CPU/GPU/RAM)\n");
-    fprintf(stderr, "L2-Taste (2. LCD-Taste): Interface wechseln (auf Netzwerk-Seite)\n");
-    fprintf(stderr, "Verfügbare Interfaces: ");
-    {
-        int i;
-        for (i = 0; i < iface_count; i++)
-            fprintf(stderr, "%s%s", iface_list[i], (i < iface_count - 1) ? ", " : "");
-    }
-    fprintf(stderr, "\n");
-    fprintf(stderr, "Drücke Ctrl+C zum Beenden.\n");
+    printf("g15netspeed gestartet für Interface: '%s'\n", iface);
+    printf("Drücke Ctrl+C zum Beenden.\n");
 
     while (running) {
         struct timespec ts;
@@ -558,43 +265,6 @@ int main(int argc, char *argv[]) {
         ts.tv_nsec = (UPDATE_MS % 1000) * 1000000L;
         nanosleep(&ts, NULL);
 
-        /* Tastenerkennung (nicht-blockierend via select) */
-        {
-            fd_set readfds;
-            struct timeval tv = {0, 0};  /* sofort zurückkehren */
-            FD_ZERO(&readfds);
-            FD_SET(g15_fd, &readfds);
-            if (select(g15_fd + 1, &readfds, NULL, NULL, &tv) > 0) {
-                int ret = recv(g15_fd, (char *)&key_state, sizeof(key_state), 0);
-                if (ret == sizeof(key_state)) {
-                    if ((key_state & L1_KEY) && !(prev_key_state & L1_KEY)) {
-                        current_page = (current_page + 1) % NUM_PAGES;
-                        fprintf(stderr, "Seite gewechselt: %d\n", current_page);
-                    }
-                    if ((key_state & L2_KEY) && !(prev_key_state & L2_KEY)) {
-                        if (current_page == 0 && iface_count > 1) {
-                            /* Nächstes Interface */
-                            iface_index = (iface_index + 1) % iface_count;
-                            iface = iface_list[iface_index];
-                            fprintf(stderr, "Interface gewechselt: %s\n", iface);
-
-                            /* History und Zähler zurücksetzen */
-                            memset(dl_history, 0, sizeof(dl_history));
-                            memset(ul_history, 0, sizeof(ul_history));
-                            dl_count = 0;
-                            ul_count = 0;
-                            first_read = 1;
-
-                            /* Neue Byte-Zähler lesen */
-                            read_net_bytes(iface, &prev_rx, &prev_tx);
-                        }
-                    }
-                    prev_key_state = key_state;
-                }
-            }
-        }
-
-        /* === Netzwerk-Daten immer sammeln === */
         if (read_net_bytes(iface, &curr_rx, &curr_tx) != 0)
             continue;
 
@@ -605,184 +275,65 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        /* KB/s berechnen (Skalierung auf 1 Sekunde) */
         double dl_kbps = (double)(curr_rx - prev_rx) / 1024.0 * (1000.0 / UPDATE_MS);
         double ul_kbps = (double)(curr_tx - prev_tx) / 1024.0 * (1000.0 / UPDATE_MS);
+
+        printf("DL: %.2f KB/s  UL: %.2f KB/s  (rx=%llu tx=%llu)\n",
+               dl_kbps, ul_kbps, curr_rx, curr_tx);
+
         prev_rx = curr_rx;
         prev_tx = curr_tx;
 
+        /* History aktualisieren */
         push_history(dl_history, &dl_count, HISTORY_SIZE, dl_kbps);
         push_history(ul_history, &ul_count, HISTORY_SIZE, ul_kbps);
 
-        /* === System-Daten immer sammeln === */
+        /* Maximalwerte für Skalierung */
+        double dl_max = find_max(dl_history, dl_count);
+        double ul_max = find_max(ul_history, ul_count);
+
+        /* Mindest-Skalierung: 10 KB/s */
+        if (dl_max < 10.0) dl_max = 10.0;
+        if (ul_max < 10.0) ul_max = 10.0;
+
+        /* Strings formatieren */
+        format_speed(dl_kbps, dl_str, sizeof(dl_str));
+        format_speed(dl_max, max_dl_str, sizeof(max_dl_str));
+        format_speed(ul_kbps, ul_str, sizeof(ul_str));
+        format_speed(ul_max, max_ul_str, sizeof(max_ul_str));
+
+        /* System-Auslastung lesen */
         int cpu_pct = read_cpu_usage();
-        int cpu_temp = read_cpu_temp();
         int ram_pct = read_ram_usage();
-        int gpu_pct = read_gpu_usage();
-        int gpu_temp = read_gpu_temp();
-        int swap_pct = read_swap_usage();
 
-        push_history(cpu_history, &cpu_count, HISTORY_SIZE, (double)cpu_pct);
-        push_history(cpu_temp_history, &cpu_temp_count, HISTORY_SIZE, (double)cpu_temp);
-        push_history(gpu_history, &gpu_count, HISTORY_SIZE, (double)(gpu_pct >= 0 ? gpu_pct : 0));
-        push_history(gpu_temp_history, &gpu_temp_count, HISTORY_SIZE, (double)gpu_temp);
-        push_history(ram_history, &ram_count, HISTORY_SIZE, (double)ram_pct);
-        push_history(swap_history, &swap_count, HISTORY_SIZE, (double)swap_pct);
-
-        /* === Canvas leeren === */
+        /* Canvas leeren und zeichnen */
         g15r_clearScreen(&canvas, G15_COLOR_WHITE);
 
-        /* === Aktive Seite zeichnen === */
-        if (current_page == 0) {
-            /* --- Seite 0: Netzwerk --- */
-            double dl_max = find_max(dl_history, dl_count);
-            double ul_max = find_max(ul_history, ul_count);
-            if (dl_max < 10.0) dl_max = 10.0;
-            if (ul_max < 10.0) ul_max = 10.0;
-
-            format_speed_value(dl_kbps, dl_str, sizeof(dl_str));
-            format_speed_value(ul_kbps, ul_str, sizeof(ul_str));
-            format_bytes(curr_rx, dl_total_str, sizeof(dl_total_str));
-            format_bytes(curr_tx, ul_total_str, sizeof(ul_total_str));
-
-            /* Kopfzeile: Interface + Gesamtdatenmenge */
-            {
-                char iface_short[8];
-                snprintf(iface_short, sizeof(iface_short), "%s", iface);
-                g15r_renderString(&canvas, (unsigned char *)iface_short, 0, G15_TEXT_MED, 0, 0);
-            }
-            snprintf(title, sizeof(title), "D:%s U:%s", dl_total_str, ul_total_str);
-            g15r_renderString(&canvas, (unsigned char *)title, 0, G15_TEXT_MED,
-                              LCD_WIDTH - (int)strlen(title) * 5, 0);
-
-            /* Download-Graph */
-            {
-                char dl_label[16];
-                snprintf(dl_label, sizeof(dl_label), "DL(%s)", speed_unit(dl_kbps));
-                g15r_renderString(&canvas, (unsigned char *)dl_label, 0, G15_TEXT_SMALL, 1, 10);
-            }
-            g15r_renderString(&canvas, (unsigned char *)dl_str, 0, G15_TEXT_SMALL, 1, 18);
-            draw_graph(&canvas, dl_history, dl_count,
-                       GRAPH_X, 10, GRAPH_WIDTH, GRAPH_HEIGHT, dl_max, 0);
-
-            /* Trennlinie */
-            g15r_drawLine(&canvas, 0, 27, LCD_WIDTH - 1, 27, G15_COLOR_BLACK);
-
-            /* Upload-Graph (invertiert) */
-            {
-                char ul_label[16];
-                snprintf(ul_label, sizeof(ul_label), "UL(%s)", speed_unit(ul_kbps));
-                g15r_renderString(&canvas, (unsigned char *)ul_label, 0, G15_TEXT_SMALL, 1, 29);
-            }
-            g15r_renderString(&canvas, (unsigned char *)ul_str, 0, G15_TEXT_SMALL, 1, 36);
-            draw_graph(&canvas, ul_history, ul_count,
-                       GRAPH_X, 28, GRAPH_WIDTH, 14, ul_max, 1);
-
-        } else if (current_page == 1) {
-            /* --- Seite 1: CPU --- */
-            double cpu_max = 100.0;
-            double temp_max = find_max(cpu_temp_history, cpu_temp_count);
-            if (temp_max < 50.0) temp_max = 100.0;
-            else temp_max = temp_max * 1.2;
-
-            /* Kopfzeile */
-            snprintf(title, sizeof(title), "CPU: %d%%  Temp: %dC", cpu_pct, cpu_temp);
-            g15r_renderString(&canvas, (unsigned char *)title, 0, G15_TEXT_MED, 0, 0);
-
-            /* CPU-Auslastung Graph */
-            {
-                char pct_str[16];
-                snprintf(pct_str, sizeof(pct_str), "%d%%", cpu_pct);
-                g15r_renderString(&canvas, (unsigned char *)"CPU", 0, G15_TEXT_SMALL, 1, 10);
-                g15r_renderString(&canvas, (unsigned char *)pct_str, 0, G15_TEXT_SMALL, 1, 18);
-            }
-            draw_graph(&canvas, cpu_history, cpu_count,
-                       GRAPH_X, 10, GRAPH_WIDTH, GRAPH_HEIGHT, cpu_max, 0);
-
-            /* Trennlinie */
-            g15r_drawLine(&canvas, 0, 27, LCD_WIDTH - 1, 27, G15_COLOR_BLACK);
-
-            /* CPU-Temperatur Graph (invertiert) */
-            {
-                char temp_str[16];
-                snprintf(temp_str, sizeof(temp_str), "%dC", cpu_temp);
-                g15r_renderString(&canvas, (unsigned char *)"TMP", 0, G15_TEXT_SMALL, 1, 29);
-                g15r_renderString(&canvas, (unsigned char *)temp_str, 0, G15_TEXT_SMALL, 1, 36);
-            }
-            draw_graph(&canvas, cpu_temp_history, cpu_temp_count,
-                       GRAPH_X, 28, GRAPH_WIDTH, 14, temp_max, 1);
-
-        } else if (current_page == 2) {
-            /* --- Seite 2: GPU --- */
-            double gpu_max = 100.0;
-            double gtemp_max = find_max(gpu_temp_history, gpu_temp_count);
-            if (gtemp_max < 50.0) gtemp_max = 100.0;
-            else gtemp_max = gtemp_max * 1.2;
-
-            /* Kopfzeile */
-            if (gpu_pct >= 0)
-                snprintf(title, sizeof(title), "GPU: %d%%  Temp: %dC", gpu_pct, gpu_temp);
-            else
-                snprintf(title, sizeof(title), "GPU: N/A  Temp: %dC", gpu_temp);
-            g15r_renderString(&canvas, (unsigned char *)title, 0, G15_TEXT_MED, 0, 0);
-
-            /* GPU-Auslastung Graph */
-            {
-                char pct_str[16];
-                if (gpu_pct >= 0)
-                    snprintf(pct_str, sizeof(pct_str), "%d%%", gpu_pct);
-                else
-                    snprintf(pct_str, sizeof(pct_str), "N/A");
-                g15r_renderString(&canvas, (unsigned char *)"GPU", 0, G15_TEXT_SMALL, 1, 10);
-                g15r_renderString(&canvas, (unsigned char *)pct_str, 0, G15_TEXT_SMALL, 1, 18);
-            }
-            draw_graph(&canvas, gpu_history, gpu_count,
-                       GRAPH_X, 10, GRAPH_WIDTH, GRAPH_HEIGHT, gpu_max, 0);
-
-            /* Trennlinie */
-            g15r_drawLine(&canvas, 0, 27, LCD_WIDTH - 1, 27, G15_COLOR_BLACK);
-
-            /* GPU-Temperatur Graph (invertiert) */
-            {
-                char temp_str[16];
-                snprintf(temp_str, sizeof(temp_str), "%dC", gpu_temp);
-                g15r_renderString(&canvas, (unsigned char *)"TMP", 0, G15_TEXT_SMALL, 1, 29);
-                g15r_renderString(&canvas, (unsigned char *)temp_str, 0, G15_TEXT_SMALL, 1, 36);
-            }
-            draw_graph(&canvas, gpu_temp_history, gpu_temp_count,
-                       GRAPH_X, 28, GRAPH_WIDTH, 14, gtemp_max, 1);
-
-        } else if (current_page == 3) {
-            /* --- Seite 3: RAM --- */
-            double ram_max = 100.0;
-            double swap_max = 100.0;
-
-            /* Kopfzeile */
-            snprintf(title, sizeof(title), "RAM: %d%%  Swap: %d%%", ram_pct, swap_pct);
-            g15r_renderString(&canvas, (unsigned char *)title, 0, G15_TEXT_MED, 0, 0);
-
-            /* RAM-Auslastung Graph */
-            {
-                char pct_str[16];
-                snprintf(pct_str, sizeof(pct_str), "%d%%", ram_pct);
-                g15r_renderString(&canvas, (unsigned char *)"RAM", 0, G15_TEXT_SMALL, 1, 10);
-                g15r_renderString(&canvas, (unsigned char *)pct_str, 0, G15_TEXT_SMALL, 1, 18);
-            }
-            draw_graph(&canvas, ram_history, ram_count,
-                       GRAPH_X, 10, GRAPH_WIDTH, GRAPH_HEIGHT, ram_max, 0);
-
-            /* Trennlinie */
-            g15r_drawLine(&canvas, 0, 27, LCD_WIDTH - 1, 27, G15_COLOR_BLACK);
-
-            /* Swap-Auslastung Graph (invertiert) */
-            {
-                char pct_str[16];
-                snprintf(pct_str, sizeof(pct_str), "%d%%", swap_pct);
-                g15r_renderString(&canvas, (unsigned char *)"SWP", 0, G15_TEXT_SMALL, 1, 29);
-                g15r_renderString(&canvas, (unsigned char *)pct_str, 0, G15_TEXT_SMALL, 1, 36);
-            }
-            draw_graph(&canvas, swap_history, swap_count,
-                       GRAPH_X, 28, GRAPH_WIDTH, 14, swap_max, 1);
+        /* Zeile 0: Interface links, CPU/RAM rechts. Die GPU-Abfrage ist bewusst deaktiviert. */
+        {
+            char iface_short[8];
+            snprintf(iface_short, sizeof(iface_short), "%s", iface);
+            g15r_renderString(&canvas, (unsigned char *)iface_short, 0, G15_TEXT_MED, 0, 0);
         }
+        snprintf(title, sizeof(title), "CPU:%d%% RAM:%d%%", cpu_pct, ram_pct);
+        g15r_renderString(&canvas, (unsigned char *)title, 0, G15_TEXT_MED,
+                          LCD_WIDTH - (int)strlen(title) * 5, 0);
+
+        /* Download-Label und Graph: y=10 bis y=25 */
+        g15r_renderString(&canvas, (unsigned char *)"DL", 0, G15_TEXT_SMALL, 1, 10);
+        g15r_renderString(&canvas, (unsigned char *)dl_str, 0, G15_TEXT_SMALL, 1, 18);
+        draw_graph(&canvas, dl_history, dl_count,
+                   GRAPH_X, 10, GRAPH_WIDTH, GRAPH_HEIGHT, dl_max, 0);
+
+        /* Trennlinie */
+        g15r_drawLine(&canvas, 0, 27, LCD_WIDTH - 1, 27, G15_COLOR_BLACK);
+
+        /* Upload-Label und Graph: y=28 bis y=41 (invertiert, wächst nach unten) */
+        g15r_renderString(&canvas, (unsigned char *)"UL", 0, G15_TEXT_SMALL, 1, 29);
+        g15r_renderString(&canvas, (unsigned char *)ul_str, 0, G15_TEXT_SMALL, 1, 36);
+        draw_graph(&canvas, ul_history, ul_count,
+                   GRAPH_X, 28, GRAPH_WIDTH, 14, ul_max, 1);
 
         /* An g15daemon senden */
         g15_send(g15_fd, (char *)canvas.buffer, G15_BUFFER_LEN);
@@ -793,6 +344,6 @@ int main(int argc, char *argv[]) {
     g15_send(g15_fd, (char *)canvas.buffer, G15_BUFFER_LEN);
     g15_close_screen(g15_fd);
 
-    fprintf(stderr, "\ng15netspeed beendet. (Letzte Seite: %d)\n", current_page);
+    printf("\ng15netspeed beendet.\n");
     return 0;
 }
