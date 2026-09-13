@@ -134,7 +134,10 @@ static int find_hwmon_temperature(char *path, size_t length) {
         if (!stream)
             continue;
         name[0] = '\0';
-        (void)fscanf(stream, "%63s", name);
+        if (fscanf(stream, "%63s", name) != 1) {
+            fclose(stream);
+            continue;
+        }
         fclose(stream);
 
         if (strcmp(name, "coretemp") == 0 || strcmp(name, "k10temp") == 0 ||
@@ -168,7 +171,10 @@ static int find_thermal_temperature(char *path, size_t length) {
         if (!stream)
             continue;
         type[0] = '\0';
-        (void)fscanf(stream, "%63s", type);
+        if (fscanf(stream, "%63s", type) != 1) {
+            fclose(stream);
+            continue;
+        }
         fclose(stream);
 
         if (strcmp(type, "x86_pkg_temp") == 0 || strcmp(type, "cpu-thermal") == 0) {
