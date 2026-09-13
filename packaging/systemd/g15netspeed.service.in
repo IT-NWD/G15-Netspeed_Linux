@@ -1,0 +1,16 @@
+[Unit]
+Description=g15netspeed - Netzwerk-Geschwindigkeitsanzeige für G15 LCD
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@BINDIR@/g15netspeed
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=default.target

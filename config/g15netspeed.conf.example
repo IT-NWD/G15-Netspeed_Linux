@@ -1,0 +1,17 @@
+# g15netspeed-Konfiguration
+# Ziel: ~/.config/g15netspeed/config
+
+# Interface der IPv4-Standardroute automatisch erkennen oder Namen angeben.
+interface=auto
+
+# Messintervall: 50 bis 5000 Millisekunden.
+refresh_ms=150
+
+# Wartezeit nach einer getrennten g15daemon-Verbindung.
+reconnect_ms=5000
+
+# Fortlaufende Messwerte ins Journal/Terminal schreiben.
+verbose=false
+
+# adaptive blendet einzelne Ausreißer aus; maximum zeigt jeden Peak.
+scale=adaptive

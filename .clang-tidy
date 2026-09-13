@@ -1,0 +1,9 @@
+Checks: >
+  -*,
+  clang-analyzer-core.*,
+  clang-analyzer-unix.*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-unsafe-functions,
+WarningsAsErrors: 'clang-analyzer-core.*,clang-analyzer-unix.*'
+HeaderFilterRegex: '^(src|include|tests)/'
