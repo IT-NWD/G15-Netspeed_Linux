@@ -2,6 +2,7 @@
 .aider*
 
 # Build-Artefakte
-g15netspeed
-g15netspeed.c.old
-g15keytest
+/g15netspeed
+/g15netspeed.c.old
+/g15keytest
+/build/

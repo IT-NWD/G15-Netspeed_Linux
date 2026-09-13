@@ -5,15 +5,18 @@ program=${1:-./g15netspeed}
 test_dir=$(mktemp -d)
 trap 'rm -rf "$test_dir"' EXIT HUP INT TERM
 
-"$program" --help >"$test_dir/help"
+"$program" --no-config --help >"$test_dir/help"
 grep -q -- '--interface' "$test_dir/help"
 grep -q -- '--refresh' "$test_dir/help"
 grep -q -- '--list-interfaces' "$test_dir/help"
 
-"$program" --list-interfaces >"$test_dir/interfaces"
+"$program" --no-config --version >"$test_dir/version"
+grep -Eq '^g15netspeed [0-9]+\.[0-9]+\.[0-9]+$' "$test_dir/version"
+
+"$program" --no-config --list-interfaces >"$test_dir/interfaces"
 test -s "$test_dir/interfaces"
 
-if "$program" --refresh 10 >"$test_dir/invalid-refresh" 2>&1; then
+if "$program" --no-config --refresh 10 >"$test_dir/invalid-refresh" 2>&1; then
     echo "Fehler: Ungültige Aktualisierungsrate wurde akzeptiert." >&2
     exit 1
 else
@@ -21,7 +24,7 @@ else
     test "$status" -eq 2
 fi
 
-if "$program" eth0 wlan0 >"$test_dir/too-many-arguments" 2>&1; then
+if "$program" --no-config eth0 wlan0 >"$test_dir/too-many-arguments" 2>&1; then
     echo "Fehler: Zu viele Positionsargumente wurden akzeptiert." >&2
     exit 1
 else

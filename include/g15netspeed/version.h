@@ -1,0 +1,6 @@
+#ifndef G15NETSPEED_VERSION_H
+#define G15NETSPEED_VERSION_H
+
+#define G15NETSPEED_VERSION "1.0.0"
+
+#endif
